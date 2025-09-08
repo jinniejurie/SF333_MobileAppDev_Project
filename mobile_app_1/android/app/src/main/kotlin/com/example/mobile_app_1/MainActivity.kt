@@ -1,4 +1,4 @@
-package com.example.mobile_app_1
+package com.oncloud.android
 
 import io.flutter.embedding.android.FlutterActivity
 
