@@ -1,4 +1,4 @@
-name: mobile_app_1
+name: my_app
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -30,14 +30,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+    
+  provider: ^6.0.5
+  intl: ^0.19.0
+  image_picker: ^1.0.7
+  flutter_card_swiper: ^7.0.2
+  firebase_core: ^2.32.0
+  cloud_firestore: ^4.17.5
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  firebase_core: ^2.32.0
-  cloud_firestore: ^4.9.1
-  firebase_auth: ^4.17.8
 
 dev_dependencies:
   flutter_test:
@@ -55,7 +58,8 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
+  assets:
+    - assets/
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
