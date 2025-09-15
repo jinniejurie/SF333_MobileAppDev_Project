@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math';
 
 class CardSwipe extends StatefulWidget {
   const CardSwipe({super.key});
@@ -11,6 +12,10 @@ class CardSwipe extends StatefulWidget {
 
 class _CardSwipeState extends State<CardSwipe> {
   final CardSwiperController _cardController = CardSwiperController();
+
+  // Placeholder for the current user's GeoPoint.
+  // Replace this with your actual user's location from Firestore. (lat,long)
+  final GeoPoint currentUserLocation = const GeoPoint(13.899140468561423, 100.58104394247437);
 
   Future<List<String>> _getInterests(List<dynamic>? references) async {
     if (references == null || references.isEmpty) return [];
@@ -46,6 +51,30 @@ class _CardSwipeState extends State<CardSwipe> {
     return disabilityNames;
   }
 
+  //Calculate distance between profiles (จาก geopoint ใน data)
+  double _calculateDistance(GeoPoint p1, GeoPoint p2) {
+    const double earthRadius = 6371; // Radius of Earth in km
+
+    double lat1 = _degreesToRadians(p1.latitude);
+    double lon1 = _degreesToRadians(p1.longitude);
+    double lat2 = _degreesToRadians(p2.latitude);
+    double lon2 = _degreesToRadians(p2.longitude);
+
+    double dLat = lat2 - lat1;
+    double dLon = lon2 - lon1;
+
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    double distance = earthRadius * c;
+
+    return distance;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * pi / 180;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -73,11 +102,11 @@ class _CardSwipeState extends State<CardSwipe> {
                     width: 70,
                     height: 60,
                   ),
-                  const SizedBox(height: 5), // Adds a small gap between the logo and text
+                  const SizedBox(height: 5),
                   const Text(
                     'Discover People',
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: 25,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -115,7 +144,7 @@ class _CardSwipeState extends State<CardSwipe> {
                             );
                           }
 
-                          // Build cards asynchronously
+                          // Create cards
                           return FutureBuilder<List<Widget>>(
                             future: Future.wait(documents.map((doc) async {
                               final userData =
@@ -136,7 +165,15 @@ class _CardSwipeState extends State<CardSwipe> {
                                 age--;
                               }
 
-                              // Fetch interests names
+                              // Get the profile's GeoPoint
+                              final GeoPoint? profileLocation = userData['location'] as GeoPoint?;
+                              String distanceText = '';
+                              if (profileLocation != null) {
+                                final double distance = _calculateDistance(currentUserLocation, profileLocation);
+                                distanceText = '${distance.toStringAsFixed(1)} km away';
+                              }
+
+                              // Fetch interests
                               final interestsRefs =
                               userData['interest'] as List<dynamic>?;
                               final interests =
@@ -191,14 +228,15 @@ class _CardSwipeState extends State<CardSwipe> {
                                           Text(
                                             name,
                                             style: const TextStyle(
-                                                fontSize: 30,
+                                                fontSize: 28,
+                                                color: Colors.black,
                                                 fontWeight: FontWeight.bold),
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
                                             ', $age',
                                             style: const TextStyle(
-                                                fontSize: 30,
+                                                fontSize: 28,
                                                 color: Colors.black,
                                                 fontWeight: FontWeight.bold),
                                           ),
@@ -208,10 +246,19 @@ class _CardSwipeState extends State<CardSwipe> {
                                         Text(
                                           gender,
                                           style: TextStyle(
+                                              fontWeight: FontWeight.bold,
                                               fontSize: 16,
-                                              color: Colors.grey[700]),
+                                              color: Colors.black),
                                         ),
-                                      const SizedBox(height: 20),
+                                      const SizedBox(height: 2),
+                                      if (distanceText.isNotEmpty)
+                                        Text(
+                                          distanceText,
+                                          style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey[500]),
+                                        ),
+                                      const SizedBox(height: 15),
                                       if (bio.isNotEmpty)
                                         Text(
                                           bio,
@@ -289,7 +336,7 @@ class _CardSwipeState extends State<CardSwipe> {
                       ),
                     ),
                   ),
-                  // Buttons are now a separate child of the Stack
+                  // like/dislike over the cards
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: Padding(
