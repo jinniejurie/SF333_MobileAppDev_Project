@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'event_detail_page.dart';
 import 'dart:convert';
 import 'event_list_page.dart';
 
@@ -79,6 +81,8 @@ class CommunityHome extends StatefulWidget {
 
 class _CommunityHomeState extends State<CommunityHome> {
   int _currentIndex = 0;
+  int _tabIndex = 0; // 0 = Threads, 1 = Event
+  final PageController _pageController = PageController(initialPage: 0);
 
   Future<void> _openComposer() async {
     await Navigator.of(context).pushNamed('/createPost');
@@ -139,33 +143,46 @@ class _CommunityHomeState extends State<CommunityHome> {
                             fontWeight: FontWeight.w800,
                           )),
                       const SizedBox(height: 8),
-                      // Tabs under Friendzy: Threads | Event
+                      // Tabs under Friendzy: Threads | Event (swipeable like X)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            'Threads',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black,
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _tabIndex = 0);
+                              _pageController.animateToPage(
+                                0,
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.easeOut,
+                              );
+                            },
+                            child: Text(
+                              'Threads',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight:
+                                    _tabIndex == 0 ? FontWeight.w800 : FontWeight.w700,
+                                color: _tabIndex == 0 ? Colors.black : Colors.black54,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 28),
                           GestureDetector(
                             onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const EventListPage(),
-                                ),
+                              setState(() => _tabIndex = 1);
+                              _pageController.animateToPage(
+                                1,
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.easeOut,
                               );
                             },
-                            child: const Text(
+                            child: Text(
                               'Event',
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black54,
+                                fontWeight:
+                                    _tabIndex == 1 ? FontWeight.w800 : FontWeight.w700,
+                                color: _tabIndex == 1 ? Colors.black : Colors.black54,
                               ),
                             ),
                           ),
@@ -176,47 +193,16 @@ class _CommunityHomeState extends State<CommunityHome> {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('posts')
-                      .orderBy('createdAt', descending: true)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.only(top: 40),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (snapshot.hasError) {
-                      return const Padding(
-                        padding: EdgeInsets.only(top: 40),
-                        child: Center(child: Text('Failed to load posts')),
-                      );
-                    }
-                    final docs = snapshot.data?.docs ?? [];
-                    if (docs.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.only(top: 40),
-                        child: Center(child: Text('No posts yet')),
-                      );
-                    }
-                    final posts = docs.map((d) => PostItem.fromDoc(d)).toList();
-                    return ListView.builder(
-                      padding: EdgeInsets.zero,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: posts.length,
-                      itemBuilder: (context, index) {
-                        final post = posts[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          child: _PostCard(post: post),
-                        );
-                      },
-                    );
-                  },
+              SliverFillRemaining(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (i) => setState(() => _tabIndex = i),
+                  children: [
+                    // Page 0: Threads (posts)
+                    ThreadsFeed(),
+                    // Page 1: Event list page with unified background
+                    EventListEmbedded(),
+                  ],
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -420,3 +406,189 @@ class _BottomBar extends StatelessWidget {
 }
 
 
+class ThreadsFeed extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('posts')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Failed to load posts'));
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return const Center(child: Text('No posts yet'));
+        }
+        final posts = docs.map((d) => PostItem.fromDoc(d)).toList();
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 0),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final post = posts[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: _PostCard(post: post),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class EventListEmbedded extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('events').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return const Center(child: Text('No events found.'));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 0),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data();
+            final event = data as Map<String, dynamic>;
+            final colors = <Color>[
+              const Color.fromARGB(255, 172, 199, 219),
+              const Color.fromARGB(255, 145, 203, 145),
+              const Color.fromARGB(255, 170, 111, 184),
+              const Color(0xFFFFE4B5),
+              const Color.fromARGB(255, 228, 145, 97),
+            ];
+            String getDaysLeft(dynamic dateValue) {
+              try {
+                DateTime eventDate;
+                if (dateValue is String) {
+                  final parts = dateValue.split('-');
+                  eventDate = DateTime(
+                    int.parse(parts[2]),
+                    int.parse(parts[1]),
+                    int.parse(parts[0]),
+                  );
+                } else if (dateValue is Timestamp) {
+                  eventDate = dateValue.toDate();
+                } else {
+                  return 'Date error';
+                }
+                final daysLeft = eventDate.difference(DateTime.now()).inDays;
+                if (daysLeft < 0) return 'Past event';
+                if (daysLeft == 0) return 'Today';
+                if (daysLeft == 1) return '1 day left';
+                return '$daysLeft days left';
+              } catch (_) {
+                return 'Date error';
+              }
+            }
+
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EventDetailPage(
+                      eventId: docs[index].id,
+                      currentUserId: currentUserId,
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors[index % colors.length],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        event['title'] ?? 'N/A',
+                        style: const TextStyle(fontSize: 22, color: Colors.black),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Text(
+                            event['date'] is Timestamp
+                                ? (event['date'] as Timestamp)
+                                    .toDate()
+                                    .toString()
+                                    .split(' ')[0]
+                                : (event['date'] ?? 'N/A'),
+                            style: const TextStyle(fontSize: 16, color: Colors.black),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              getDaysLeft(event['date']),
+                              style: const TextStyle(fontSize: 12, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        event['location'] ?? 'N/A',
+                        style: const TextStyle(fontSize: 16, color: Colors.black),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.face_2, size: 18, color: Colors.black),
+                              const SizedBox(width: 4),
+                              Text(
+                                ' ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length == 1 ? '' : 's'}',
+                                style: const TextStyle(fontSize: 16, color: Colors.black),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 20),
+                          Row(
+                            children: [
+                              const Icon(Icons.whatshot, size: 18, color: Colors.black),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${(event['upvotes'] ?? []).length}',
+                                style: const TextStyle(fontSize: 16, color: Colors.black),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}

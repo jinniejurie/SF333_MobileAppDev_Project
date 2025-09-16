@@ -4,14 +4,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'event_detail_page.dart';
 import 'community_home.dart';
+import 'create_post_page.dart';
 
-class EventListPage extends StatelessWidget {
+class EventListPage extends StatefulWidget {
   const EventListPage({super.key});
+
+  @override
+  State<EventListPage> createState() => _EventListPageState();
+}
+
+class _EventListPageState extends State<EventListPage> {
+  int _currentIndex = 1;
 
   @override
   Widget build(BuildContext context) {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
+      extendBody: true,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -219,6 +228,72 @@ class EventListPage extends StatelessWidget {
             },
           ),
         ),
+      ),
+      bottomNavigationBar: _EventBottomBar(
+        currentIndex: _currentIndex,
+        onChanged: (i) => setState(() => _currentIndex = i),
+        onPlus: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CreatePostPage()),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EventBottomBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+  final VoidCallback onPlus;
+  const _EventBottomBar({required this.currentIndex, required this.onChanged, required this.onPlus});
+
+  Color _color(int i) => currentIndex == i ? const Color(0xFF4C1D95) : Colors.black54;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 20),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: () => onChanged(0),
+            icon: Icon(Icons.home_rounded, color: _color(0)),
+          ),
+          IconButton(
+            onPressed: () => onChanged(1),
+            icon: Icon(Icons.explore_outlined, color: _color(1)),
+          ),
+          GestureDetector(
+            onTap: onPlus,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF4C1D95),
+              ),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+          ),
+          IconButton(
+            onPressed: () => onChanged(3),
+            icon: Icon(Icons.group_outlined, color: _color(3)),
+          ),
+          IconButton(
+            onPressed: () => onChanged(4),
+            icon: Icon(Icons.person_outline, color: _color(4)),
+          ),
+        ],
       ),
     );
   }
