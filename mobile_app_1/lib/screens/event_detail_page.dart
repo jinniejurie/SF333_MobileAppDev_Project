@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EventDetailPage extends StatefulWidget {
   final String eventId;
@@ -225,7 +226,11 @@ class _EventDetailPageState extends State<EventDetailPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return ReportDialog(commentId: commentId);
+        return ReportDialog(
+          commentId: commentId,
+          eventId: widget.eventId,
+          reporterId: widget.currentUserId,
+        );
       },
     );
   }
@@ -824,8 +829,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
 class ReportDialog extends StatefulWidget {
   final String commentId;
+  final String eventId;
+  final String reporterId;
 
-  ReportDialog({required this.commentId});
+  ReportDialog({required this.commentId, required this.eventId, required this.reporterId});
 
   @override
   _ReportDialogState createState() => _ReportDialogState();
@@ -881,11 +888,11 @@ class _ReportDialogState extends State<ReportDialog> {
                   child: Text(type['label']!, style: TextStyle(color: Colors.black)),
                 );
               }).toList(),
-              onChanged: selectedReportType != null ? (String? newValue) {
-                      setState(() {
-                        selectedReportType = newValue;
-                      });
-                    } : null,
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedReportType = newValue;
+                });
+              },
             ),
             SizedBox(height: 15),
             Text(
@@ -921,23 +928,40 @@ class _ReportDialogState extends State<ReportDialog> {
     );
   }
 
-  void _submitReport() {
-    if (selectedReportType != null) {
-      // ในระบบจริงจะส่งข้อมูลไปยัง backend
-      String reportTypeLabel = reportTypes.firstWhere(
-        (type) => type['value'] == selectedReportType,
-      )['label']!;
+  void _submitReport() async {
+    if (selectedReportType == null) return;
+    try {
+      final String? uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null || uid.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to report this comment.')),
+        );
+        return;
+      }
+      final reportDoc = {
+        'eventId': widget.eventId,
+        'commentId': widget.commentId,
+        'reporterId': uid,
+        'type': selectedReportType,
+        'details': _detailsController.text.trim(),
+        'createdAt': Timestamp.now(),
+        'status': 'open',
+      };
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.eventId)
+          .collection('commentReports')
+          .add(reportDoc);
 
+      if (!mounted) return;
       Navigator.pop(context);
-
-      // แสดง dialog แทน SnackBar
       showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             backgroundColor: Colors.white,
             title: Text('Report Submitted'),
-            content: Text('Your report has been submitted successfully.'),
+            content: Text('Your comment report has been submitted.'),
             actions: [
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
@@ -947,6 +971,11 @@ class _ReportDialogState extends State<ReportDialog> {
             ],
           );
         },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Report failed: $e')),
       );
     }
   }
@@ -1061,15 +1090,23 @@ class _EventReportDialogState extends State<EventReportDialog> {
   void _submitReport() async {
     if (selectedReportType == null || _submitting) return;
     setState(() { _submitting = true; });
-    final reportDoc = {
-      'eventId': widget.eventId,
-      'reporterId': widget.reporterId,
-      'type': selectedReportType,
-      'details': _detailsController.text.trim(),
-      'createdAt': Timestamp.now(),
-      'status': 'open',
-    };
     try {
+      final String? uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null || uid.isEmpty) {
+        if (mounted) setState(() { _submitting = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to report this event.')),
+        );
+        return;
+      }
+      final reportDoc = {
+        'eventId': widget.eventId,
+        'reporterId': uid,
+        'type': selectedReportType,
+        'details': _detailsController.text.trim(),
+        'createdAt': Timestamp.now(),
+        'status': 'open',
+      };
       await FirebaseFirestore.instance
           .collection('events')
           .doc(widget.eventId)

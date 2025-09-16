@@ -4,6 +4,7 @@ import 'swipe.dart';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'event_detail_page.dart';
+import 'create_event_page.dart';
 
 class PostItem {
   final String postId;
@@ -91,7 +92,13 @@ class _CommunityHomeState extends State<CommunityHome> {
   final Set<String> _likedPostIds = <String>{};
 
   Future<void> _openComposer() async {
-    await Navigator.of(context).pushNamed('/createPost');
+    if (_tabIndex == 1) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => CreateEventPage()),
+      );
+    } else {
+      await Navigator.of(context).pushNamed('/createPost');
+    }
   }
 
   Future<void> _toggleLike(PostItem post) async {
@@ -727,12 +734,76 @@ class EventListEmbedded extends StatelessWidget {
         if (docs.isEmpty) {
           return const Center(child: Text('No events found.'));
         }
+
+        DateTime? _parseDate(dynamic v) {
+          try {
+            if (v is Timestamp) return v.toDate();
+            if (v is String) {
+              // Try common formats: dd-MM-yyyy, yyyy-MM-dd
+              final dashParts = v.split('-');
+              if (dashParts.length == 3 && dashParts[0].length <= 2) {
+                return DateTime(
+                  int.parse(dashParts[2]),
+                  int.parse(dashParts[1]),
+                  int.parse(dashParts[0]),
+                );
+              }
+              return DateTime.tryParse(v);
+            }
+          } catch (_) {}
+          return null;
+        }
+
+        final now = DateTime.now();
+        final enriched = docs.map((d) {
+          final data = d.data();
+          final Map<String, dynamic> event = data;
+          final List<dynamic> upArr = (event['upvotes'] ?? []) as List<dynamic>;
+          final int upvoteCount = upArr.length;
+
+          // Prefer endDate for past detection, else date
+          DateTime? endDt = _parseDate(event['endDate']);
+          DateTime? dateDt = _parseDate(event['date']);
+          final DateTime eventEdge = endDt ?? dateDt ?? now;
+          final bool isPast = eventEdge.isBefore(now);
+
+          return {
+            'doc': d,
+            'data': event,
+            'upvotes': upvoteCount,
+            'eventDate': dateDt ?? eventEdge,
+            'isPast': isPast,
+          };
+        }).toList();
+
+        final upcoming = enriched.where((e) => e['isPast'] == false).toList();
+        final past = enriched.where((e) => e['isPast'] == true).toList();
+
+        // Upcoming: sort by upvotes desc, then by date asc
+        upcoming.sort((a, b) {
+          final int upB = b['upvotes'] as int;
+          final int upA = a['upvotes'] as int;
+          if (upB != upA) return upB.compareTo(upA);
+          final DateTime da = a['eventDate'] as DateTime;
+          final DateTime db = b['eventDate'] as DateTime;
+          return da.compareTo(db);
+        });
+
+        // Past: push to bottom, optionally newest first
+        past.sort((a, b) {
+          final DateTime da = a['eventDate'] as DateTime;
+          final DateTime db = b['eventDate'] as DateTime;
+          return db.compareTo(da);
+        });
+
+        final ordered = <Map<String, dynamic>>[...upcoming, ...past];
+
         return ListView.builder(
           padding: const EdgeInsets.only(top: 0),
-          itemCount: docs.length,
+          itemCount: ordered.length,
           itemBuilder: (context, index) {
-            final data = docs[index].data();
-            final event = data as Map<String, dynamic>;
+            final d = ordered[index]['doc'] as QueryDocumentSnapshot<Map<String, dynamic>>;
+            final event = ordered[index]['data'] as Map<String, dynamic>;
             final colors = <Color>[
               const Color.fromARGB(255, 172, 199, 219),
               const Color.fromARGB(255, 145, 203, 145),
@@ -771,7 +842,7 @@ class EventListEmbedded extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => EventDetailPage(
-                      eventId: docs[index].id,
+                      eventId: d.id,
                       currentUserId: currentUserId,
                     ),
                   ),
