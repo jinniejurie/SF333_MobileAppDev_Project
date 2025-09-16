@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'dart:convert';
 import 'event_detail_page.dart';
 
 class CreateEventPage extends StatefulWidget {
-  const CreateEventPage({super.key});
+  final String? communityId;
+  const CreateEventPage({super.key, this.communityId});
 
   @override
   State<CreateEventPage> createState() => _CreateEventPageState();
@@ -17,11 +21,13 @@ class _CreateEventPageState extends State<CreateEventPage> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _imageUrlController = TextEditingController();
+  final TextEditingController _communityIdController = TextEditingController();
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedStartTime;
   TimeOfDay? _selectedEndTime;
   bool _submitting = false;
+  final List<XFile> _media = [];
 
   @override
   void dispose() {
@@ -29,6 +35,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
     _descriptionController.dispose();
     _locationController.dispose();
     _imageUrlController.dispose();
+    _communityIdController.dispose();
     super.dispose();
   }
 
@@ -74,6 +81,27 @@ class _CreateEventPageState extends State<CreateEventPage> {
     return '$hh:$mm$period';
   }
 
+  Future<void> _pickMedia(ImageSource source) async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source, imageQuality: 80);
+    if (image != null) {
+      setState(() => _media.add(image));
+    }
+  }
+
+  Future<List<String>> _convertMediaToBase64() async {
+    if (_media.isEmpty) return [];
+    final base64Images = <String>[];
+    for (final media in _media) {
+      try {
+        final file = File(media.path);
+        final bytes = await file.readAsBytes();
+        base64Images.add(base64Encode(bytes));
+      } catch (_) {}
+    }
+    return base64Images;
+  }
+
   Future<void> _submit() async {
     if (_submitting) return;
     if (!_formKey.currentState!.validate()) return;
@@ -107,6 +135,16 @@ class _CreateEventPageState extends State<CreateEventPage> {
         endTs = Timestamp.fromDate(DateTime(baseDate.year, baseDate.month, baseDate.day, t.hour, t.minute));
       }
 
+      final String finalCommunityId = (widget.communityId ?? _communityIdController.text).trim();
+      if (finalCommunityId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter community ID')),
+        );
+        setState(() => _submitting = false);
+        return;
+      }
+
+      final List<String> base64Images = await _convertMediaToBase64();
       final Map<String, dynamic> payload = {
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -114,9 +152,11 @@ class _CreateEventPageState extends State<CreateEventPage> {
         'imageUrl': _imageUrlController.text.trim(),
         'organizer': organizer,
         'ownerId': uid,
+        'communityId': finalCommunityId,
         'date': dateTs,
         if (startTs != null) 'start_time': startTs,
         if (endTs != null) 'end_time': endTs,
+        if (base64Images.isNotEmpty) 'mediaUrls': base64Images,
         'registered': <String>[],
         'likes': <String>[],
         'favorites': <String>[],
@@ -125,12 +165,17 @@ class _CreateEventPageState extends State<CreateEventPage> {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      final docRef = await FirebaseFirestore.instance.collection('events').add(payload);
+      final docRef = await FirebaseFirestore.instance
+          .collection('communities')
+          .doc(finalCommunityId)
+          .collection('events')
+          .add(payload);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => EventDetailPage(
+            communityId: finalCommunityId,
             eventId: docRef.id,
             currentUserId: uid,
           ),
@@ -229,6 +274,54 @@ class _CreateEventPageState extends State<CreateEventPage> {
                             ),
                           ),
                           const SizedBox(height: 12),
+                          if (_media.isNotEmpty) ...[
+                            SizedBox(
+                              height: 90,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _media.length,
+                                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                                itemBuilder: (context, i) => Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.file(File(_media[i].path), fit: BoxFit.cover, width: 120, height: 90),
+                                    ),
+                                    Positioned(
+                                      right: 4,
+                                      top: 4,
+                                      child: GestureDetector(
+                                        onTap: () => setState(() => _media.removeAt(i)),
+                                        child: const CircleAvatar(radius: 12, backgroundColor: Colors.black54, child: Icon(Icons.close, size: 14, color: Colors.white)),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () async {
+                                  final choice = await showModalBottomSheet<String>(
+                                    context: context,
+                                    builder: (context) => SafeArea(
+                                      child: Wrap(children: [
+                                        ListTile(leading: const Icon(Icons.camera_alt), title: const Text('Camera'), onTap: () => Navigator.pop(context, 'camera')),
+                                        ListTile(leading: const Icon(Icons.photo_library), title: const Text('Gallery'), onTap: () => Navigator.pop(context, 'gallery')),
+                                      ]),
+                                    ),
+                                  );
+                                  if (choice == 'camera') _pickMedia(ImageSource.camera);
+                                  if (choice == 'gallery') _pickMedia(ImageSource.gallery);
+                                },
+                                child: _lightButton(icon: Icons.attach_file, label: 'Add media'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
                           TextFormField(
                             controller: _descriptionController,
                             maxLines: 5,
@@ -310,6 +403,17 @@ class _CreateEventPageState extends State<CreateEventPage> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(label, style: const TextStyle(fontSize: 14)),
+    );
+  }
+
+  Widget _lightButton({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F4FF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(children: [Icon(icon, size: 16), const SizedBox(width: 6), Text(label)]),
     );
   }
 }

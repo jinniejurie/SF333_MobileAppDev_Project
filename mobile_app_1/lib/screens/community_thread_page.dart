@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/app_bottom_navbar.dart';
 import 'event_detail_page.dart';
+import 'create_event_page.dart';
 
 class CommunityThreadPage extends StatefulWidget {
   final String communityId;
@@ -268,150 +269,11 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
 
   Future<void> _createEvent() async {
     await _ensureSignedIn();
-    final titleCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    final locationCtrl = TextEditingController();
-    final dateCtrl = TextEditingController();
-    final timeCtrl = TextEditingController();
-    
-    final created = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateEventPage(communityId: widget.communityId),
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: const [
-                  Icon(Icons.event),
-                  SizedBox(width: 8),
-                  Text('Create Event', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18))
-                ]),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Event title',
-                    filled: true,
-                    fillColor: Color(0xFFF5F6FF),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    filled: true,
-                    fillColor: Color(0xFFF5F6FF),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: locationCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Location',
-                    filled: true,
-                    fillColor: Color(0xFFF5F6FF),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: dateCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Date (DD-MM-YYYY)',
-                          filled: true,
-                          fillColor: Color(0xFFF5F6FF),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: timeCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Time (HH:MM)',
-                          filled: true,
-                          fillColor: Color(0xFFF5F6FF),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (titleCtrl.text.trim().isEmpty || 
-                          descCtrl.text.trim().isEmpty ||
-                          locationCtrl.text.trim().isEmpty ||
-                          dateCtrl.text.trim().isEmpty ||
-                          timeCtrl.text.trim().isEmpty) return;
-                      Navigator.of(context).pop(true);
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create Event'),
-                  ),
-                )
-              ],
-            ),
-          ),
-        );
-      },
     );
-    if (created != true) return;
-
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'demo-user-001';
-    final authorName = FirebaseAuth.instance.currentUser?.displayName ?? 'Anonymous';
-    try {
-      await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(widget.communityId)
-          .collection('events')
-          .add({
-        'title': titleCtrl.text.trim(),
-        'description': descCtrl.text.trim(),
-        'location': locationCtrl.text.trim(),
-        'date': dateCtrl.text.trim(),
-        'time': timeCtrl.text.trim(),
-        'authorUid': uid,
-        'authorName': authorName,
-        'createdAt': FieldValue.serverTimestamp(),
-        'registered': [],
-        'upvotes': [],
-        'communityId': widget.communityId,
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Event created successfully!')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create event: $e')),
-      );
-    }
   }
 
   @override
@@ -744,7 +606,13 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
             Navigator.of(context).popUntil((route) => route.isFirst);
           }
         },
-        onPlus: () => Navigator.of(context).pushNamed('/createPost'),
+        onPlus: () {
+          if (_tab == 1) {
+            _createEvent();
+          } else {
+            _createThread();
+          }
+        },
       ),
     );
   }
