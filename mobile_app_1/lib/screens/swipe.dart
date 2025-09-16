@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/friend_service.dart';
 
 class CardSwipe extends StatefulWidget {
   const CardSwipe({super.key});
@@ -11,6 +13,8 @@ class CardSwipe extends StatefulWidget {
 
 class _CardSwipeState extends State<CardSwipe> {
   final CardSwiperController _cardController = CardSwiperController();
+  final FriendService _friendService = FriendService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<List<String>> _getInterests(List<dynamic>? references) async {
     if (references == null || references.isEmpty) return [];
@@ -106,7 +110,10 @@ class _CardSwipeState extends State<CardSwipe> {
                             return const Center(child: CircularProgressIndicator());
                           }
 
-                          final documents = snapshot.data!.docs;
+                          final myUid = _auth.currentUser?.uid;
+                          final documents = snapshot.data!.docs
+                              .where((d) => d.id != myUid)
+                              .toList();
                           if (documents.isEmpty) {
                             return const Center(
                               child: Text('No users found',
@@ -114,40 +121,23 @@ class _CardSwipeState extends State<CardSwipe> {
                                       color: Colors.white, fontSize: 18)),
                             );
                           }
+                          // Build cards synchronously from user docs only
+                          final cards = documents.map((doc) {
+                            final userData = doc.data() as Map<String, dynamic>;
+                            final profileImage = userData['profileImage'] as String?;
+                            final name = userData['name'] ?? 'Unknown';
+                            final gender = userData['gender'] ?? '';
+                            final bio = userData['bio'] ?? '';
+                            final Timestamp? birthTimestamp = userData['birthDate'];
+                            final DateTime birthDate = birthTimestamp?.toDate() ?? DateTime(2000, 1, 1);
+                            final today = DateTime.now();
+                            int age = today.year - birthDate.year;
+                            if (today.month < birthDate.month ||
+                                (today.month == birthDate.month && today.day < birthDate.day)) {
+                              age--;
+                            }
 
-                          // Build cards asynchronously
-                          return FutureBuilder<List<Widget>>(
-                            future: Future.wait(documents.map((doc) async {
-                              final userData =
-                              doc.data() as Map<String, dynamic>;
-                              final profileImage = userData['profileImage'] as String?;
-                              final name = userData['name'] ?? 'Unknown';
-                              final gender = userData['gender'] ?? '';
-                              final bio = userData['bio'] ?? '';
-                              final Timestamp? birthTimestamp =
-                              userData['birthDate'];
-                              final DateTime birthDate =
-                                  birthTimestamp?.toDate() ?? DateTime(2000, 1, 1);
-                              final today = DateTime.now();
-                              int age = today.year - birthDate.year;
-                              if (today.month < birthDate.month ||
-                                  (today.month == birthDate.month &&
-                                      today.day < birthDate.day)) {
-                                age--;
-                              }
-
-                              // Fetch interests names
-                              final interestsRefs =
-                              userData['interest'] as List<dynamic>?;
-                              final interests =
-                              await _getInterests(interestsRefs);
-                              final disRefs =
-                              userData['disability'] as List<dynamic>?;
-                              final disabilities =
-                              await _getDisability(disRefs);
-
-
-                              return Container(
+                            return Container(
                                 margin: const EdgeInsets.all(8),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -217,73 +207,34 @@ class _CardSwipeState extends State<CardSwipe> {
                                           bio,
                                           style: const TextStyle(fontSize: 16),
                                         ),
-                                      if (disabilities.isNotEmpty)
-                                        Padding(
-                                          padding:
-                                          const EdgeInsets.only(top: 20),
-                                          child: Wrap(
-                                            spacing: 8,
-                                            runSpacing: 4,
-                                            children: disabilities
-                                                .map((i) => Chip(
-                                              label: Text(
-                                                i,
-                                                style: const TextStyle(color: Colors.black),
-                                              ),
-                                              backgroundColor:
-                                              const Color(0xFFD0F3FF),
-                                              shape: const StadiumBorder(
-                                                side: BorderSide(
-                                                    color: Colors.black,
-                                                    width: 1),
-                                              ),
-                                            ))
-                                                .toList(),
-                                          ),
+                                      // Interests/disabilities skipped to avoid extra reads
+                                      const SizedBox(height: 12),
+                                      Center(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () async {
+                                            final me = _auth.currentUser?.uid;
+                                            if (me == null) return;
+                                            await _friendService.sendFriendRequest(doc.id);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Friend request sent')),
+                                              );
+                                            }
+                                          },
+                                          icon: const Icon(Icons.person_add_alt_1),
+                                          label: const Text('Add Friend'),
                                         ),
-                                      if (interests.isNotEmpty)
-                                        Padding(
-                                          padding:
-                                          const EdgeInsets.only(top: 10),
-                                          child: Wrap(
-                                            spacing: 8,
-                                            runSpacing: 4,
-                                            children: interests
-                                                .map((i) => Chip(
-                                              label: Text(
-                                                i,
-                                                style: const TextStyle(color: Colors.white),
-                                              ),
-                                              backgroundColor:
-                                              Colors.black,
-                                              shape: const StadiumBorder(
-                                                side: BorderSide(
-                                                    color: Colors.black,
-                                                    width: 1),
-                                              ),
-                                            ))
-                                                .toList(),
-                                          ),
-                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                               );
-                            }).toList()),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
-                                return const Center(
-                                    child: CircularProgressIndicator());
-                              }
-                              final cards = snapshot.data!;
-                              return CardSwiper(
-                                controller: _cardController,
-                                cardsCount: cards.length,
-                                cardBuilder:
-                                    (context, index, percentX, percentY) =>
-                                cards[index],
-                              );
-                            },
+                          }).toList();
+
+                          return CardSwiper(
+                            controller: _cardController,
+                            cardsCount: cards.length,
+                            cardBuilder: (context, index, percentX, percentY) => cards[index],
                           );
                         },
                       ),
