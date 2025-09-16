@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../services/chat_service.dart';
 import 'chat_detail_screen.dart';
+import 'swipe.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -91,7 +92,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _SegmentedHeader(),
+                        _SegmentedHeader(
+                          onDiscoverTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const CardSwipe()),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 12),
                       ],
                     ),
@@ -202,6 +209,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
 }
 
 class _SegmentedHeader extends StatelessWidget {
+  final VoidCallback? onDiscoverTap;
+  const _SegmentedHeader({this.onDiscoverTap});
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -220,7 +229,9 @@ class _SegmentedHeader extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Container(
+          child: InkWell(
+            onTap: onDiscoverTap,
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
@@ -243,6 +254,7 @@ class _SegmentedHeader extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
       ],
     );

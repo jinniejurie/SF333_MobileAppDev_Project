@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'chat_list_screen.dart';
 import 'friends_screen.dart';
-import 'requests_screen.dart';
 import 'swipe.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,7 +20,6 @@ class _HomeScreenState extends State<HomeScreen> {
       const CardSwipe(),
       FriendsScreen(),
       const ChatListScreen(),
-      RequestsScreen(),
     ];
 
     return Scaffold(
@@ -49,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
             onDestinationSelected: (i) => setState(() => _index = i),
             destinations: const [
               NavigationDestination(icon: Icon(Icons.home_outlined), label: ''),
-              NavigationDestination(icon: Icon(Icons.add_circle_outline), label: ''),
               NavigationDestination(icon: Icon(Icons.group_outlined), label: ''),
               NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: ''),
             ],

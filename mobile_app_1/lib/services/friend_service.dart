@@ -81,6 +81,27 @@ class FriendService {
         .snapshots()
         .map((s) => s.docs);
   }
+
+  // Register a right swipe. If they already liked me, accept for both.
+  Future<void> likeUser(String targetUserId) async {
+    final myDoc = _friendsCollection(_uid).doc(targetUserId);
+    final theirDoc = _friendsCollection(targetUserId).doc(_uid);
+
+    final theirSnap = await theirDoc.get();
+
+    // If the other side has an outgoing pending (which means I have incoming), accept.
+    if (theirSnap.exists) {
+      final data = theirSnap.data() as Map<String, dynamic>;
+      if (data['status'] == 'pending' && data['direction'] == 'outgoing') {
+        await acceptFriendRequest(targetUserId);
+        return;
+      }
+      if (data['status'] == 'accepted') return; // Already friends
+    }
+
+    // Otherwise create reciprocal pending entries
+    await sendFriendRequest(targetUserId);
+  }
 }
 
 
