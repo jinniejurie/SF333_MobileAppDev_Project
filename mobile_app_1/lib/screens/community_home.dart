@@ -1044,7 +1044,7 @@ class EventListEmbedded extends StatelessWidget {
   Widget build(BuildContext context) {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('events').snapshots(),
+      stream: FirebaseFirestore.instance.collectionGroup('events').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -1164,6 +1164,7 @@ class EventListEmbedded extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => EventDetailPage(
+                      communityId: d.reference.parent.parent!.id,
                       eventId: d.id,
                       currentUserId: currentUserId,
                     ),
