@@ -384,7 +384,13 @@ class _CardSwipeState extends State<CardSwipe> {
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.home_rounded, color: Colors.black54),
             ),
-            const Icon(Icons.explore_outlined, color: Colors.black54),
+            IconButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushNamed('/communityDiscover');
+              },
+              icon: const Icon(Icons.explore_outlined, color: Colors.black54),
+            ),
             Container(
               width: 48,
               height: 48,

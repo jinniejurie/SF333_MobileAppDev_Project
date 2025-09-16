@@ -4,6 +4,9 @@ import 'swipe.dart';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'event_detail_page.dart';
+import 'community_discover_page.dart';
+import 'community_thread_page.dart';
+import '../widgets/app_bottom_navbar.dart';
 import 'create_event_page.dart';
 
 class PostItem {
@@ -87,12 +90,10 @@ class CommunityHome extends StatefulWidget {
 
 class _CommunityHomeState extends State<CommunityHome> {
   int _currentIndex = 0;
-  int _tabIndex = 0; // 0 = Threads, 1 = Event
-  final PageController _pageController = PageController(initialPage: 0);
   final Set<String> _likedPostIds = <String>{};
 
   Future<void> _openComposer() async {
-    if (_tabIndex == 1) {
+    if (_currentIndex == 1) {
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => CreateEventPage()),
       );
@@ -374,7 +375,14 @@ class _CommunityHomeState extends State<CommunityHome> {
                             );
                           }, child: _pillButton('Make Friends')),
                           const SizedBox(width: 12),
-                          _pillButton('Join Community'),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
+                              );
+                            },
+                            child: _pillButton('Join Community'),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -384,98 +392,46 @@ class _CommunityHomeState extends State<CommunityHome> {
                             fontWeight: FontWeight.w800,
                           )),
                       const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              setState(() => _tabIndex = 0);
-                              _pageController.animateToPage(
-                                0,
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeOut,
-                              );
-                            },
-                            child: Text(
-                              'Threads',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: _tabIndex == 0 ? FontWeight.w800 : FontWeight.w700,
-                                color: _tabIndex == 0 ? Colors.black : Colors.black54,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 28),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() => _tabIndex = 1);
-                              _pageController.animateToPage(
-                                1,
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeOut,
-                              );
-                            },
-                            child: Text(
-                              'Event',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: _tabIndex == 1 ? FontWeight.w800 : FontWeight.w700,
-                                color: _tabIndex == 1 ? Colors.black : Colors.black54,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
               ),
               SliverFillRemaining(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (i) => setState(() => _tabIndex = i),
-                  children: [
-                    // Page 0: Threads (posts)
-                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: FirebaseFirestore.instance
-                          .collection('posts')
-                          .orderBy('createdAt', descending: true)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return const Center(child: Text('Failed to load posts'));
-                        }
-                        final docs = snapshot.data?.docs ?? [];
-                        if (docs.isEmpty) {
-                          return const Center(child: Text('No posts yet'));
-                        }
-                        final posts = docs.map((d) => PostItem.fromDoc(d)).toList();
-                        return ListView.builder(
-                          padding: const EdgeInsets.only(top: 0),
-                          itemCount: posts.length,
-                          itemBuilder: (context, index) {
-                            final post = posts[index];
-                            final isLiked = _likedPostIds.contains(post.postId);
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              child: _PostCard(
-                                post: post,
-                                onLike: _toggleLike,
-                                onComment: _openComments,
-                                isLiked: isLiked,
-                              ),
-                            );
-                          },
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('posts')
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return const Center(child: Text('Failed to load posts'));
+                    }
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return const Center(child: Text('No posts yet'));
+                    }
+                    final posts = docs.map((d) => PostItem.fromDoc(d)).toList();
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(top: 0),
+                      itemCount: posts.length,
+                      itemBuilder: (context, index) {
+                        final post = posts[index];
+                        final isLiked = _likedPostIds.contains(post.postId);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: _PostCard(
+                            post: post,
+                            onLike: _toggleLike,
+                            onComment: _openComments,
+                            isLiked: isLiked,
+                          ),
                         );
                       },
-                    ),
-                    // Page 1: Event list page
-                    EventListEmbedded(),
-                  ],
+                    );
+                  },
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -483,15 +439,10 @@ class _CommunityHomeState extends State<CommunityHome> {
           ),
         ),
       ),
-      bottomNavigationBar: _BottomBar(
+      bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,
         onChanged: (i) {
           setState(() => _currentIndex = i);
-          if (i == 3) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CardSwipe()),
-            );
-          }
         },
         onPlus: _openComposer,
       ),
@@ -500,7 +451,6 @@ class _CommunityHomeState extends State<CommunityHome> {
 
   @override
   void dispose() {
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -714,6 +664,333 @@ class TagFeedPage extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class CommunityDiscoverPage extends StatefulWidget {
+  const CommunityDiscoverPage({super.key});
+
+  @override
+  State<CommunityDiscoverPage> createState() => _CommunityDiscoverPageState();
+}
+
+class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
+  final TextEditingController _search = TextEditingController();
+
+  Future<void> _createCommunity() async {
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    Color selectedColor = const Color(0xFFF6B48F);
+    final colors = <Color>[
+      const Color(0xFFF6B48F), // orange
+      const Color(0xFFB3E1F4), // blue
+      const Color(0xFFF3F0B2), // yellow
+      const Color(0xFFC9E6C9), // green
+      const Color(0xFFD8C6F0), // purple
+    ];
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setSt) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.cloud, size: 20),
+                    SizedBox(width: 8),
+                    Text('Create community', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Community name',
+                    filled: true,
+                    fillColor: Color(0xFFF5F6FF),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                    filled: true,
+                    fillColor: Color(0xFFF5F6FF),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Card color', style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  children: colors
+                      .map((c) => GestureDetector(
+                            onTap: () => setSt(() => selectedColor = c),
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: c,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: selectedColor == c ? Colors.black : Colors.black26, width: 2),
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty) return;
+                      Navigator.of(context).pop(true);
+                    },
+                    icon: const Icon(Icons.check),
+                    label: const Text('Create'),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (created != true) return;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'demo-user-001';
+    final ownerName = FirebaseAuth.instance.currentUser?.displayName ?? 'Anonymous';
+    final communities = FirebaseFirestore.instance.collection('communities');
+    final doc = communities.doc();
+    final colorHex = '#${selectedColor.value.toRadixString(16).padLeft(8, '0')}';
+    await doc.set({
+      'communityId': doc.id,
+      'name': nameCtrl.text.trim(),
+      'description': descCtrl.text.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'ownerUid': uid,
+      'ownerName': ownerName,
+      'membersCount': 1,
+      'members': [uid],
+      'coverColor': colorHex,
+      'avatarUrl': null,
+      'latestThreadAt': FieldValue.serverTimestamp(),
+    });
+
+    // Initialize threads subcollection with a welcome thread
+    final threads = doc.collection('threads');
+    await threads.add({
+      'title': 'Welcome to ${nameCtrl.text.trim()} 👋',
+      'text': 'Say hi to your new community!',
+      'authorUid': uid,
+      'authorName': ownerName,
+      'createdAt': FieldValue.serverTimestamp(),
+      'likesCount': 0,
+      'commentsCount': 0,
+    });
+
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => CommunityThreadPage(communityId: doc.id, communityName: nameCtrl.text.trim(), coverColorHex: colorHex)),
+    );
+  }
+
+  Future<void> _joinAndOpen(String communityId, String name, String colorHex) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'demo-user-001';
+    final ref = FirebaseFirestore.instance.collection('communities').doc(communityId);
+    await FirebaseFirestore.instance.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final data = snap.data() as Map<String, dynamic>? ?? {};
+      final members = (data['members'] as List?)?.map((e) => e.toString()).toList() ?? <String>[];
+      if (!members.contains(uid)) {
+        tx.update(ref, {
+          'members': FieldValue.arrayUnion([uid]),
+          'membersCount': FieldValue.increment(1),
+        });
+      }
+    });
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => CommunityThreadPage(communityId: communityId, communityName: name, coverColorHex: colorHex)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBody: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Image.asset('assets/cloud_logo.png', width: 42, height: 34),
+                    const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text('Community', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _createCommunity,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Text('Create your own community', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                              SizedBox(width: 8),
+                              Icon(Icons.construction, color: Colors.white, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Icon(Icons.search, size: 22),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('communities')
+                      .orderBy('membersCount', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final docs = snapshot.data?.docs ?? [];
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data();
+                        final name = (data['name'] ?? 'Unknown').toString();
+                        final desc = (data['description'] ?? '').toString();
+                        final membersCount = (data['membersCount'] ?? 0) as int;
+                        final colorHex = (data['coverColor'] ?? '#FFE0B2').toString();
+                        final bg = _hexToColor(colorHex);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: bg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.black54),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text('$membersCount members', style: const TextStyle(color: Colors.black87)),
+                                  const SizedBox(height: 10),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: GestureDetector(
+                                      onTap: () => _joinAndOpen(docs[index].id, name, colorHex),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.black),
+                                        ),
+                                        child: const Text('JOIN', style: TextStyle(fontWeight: FontWeight.w700)),
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 1,
+        onChanged: (_) {},
+        onPlus: () {},
+      ),
+    );
+  }
+}
+
+
+String _timeAgoFrom(dynamic ts) {
+  try {
+    DateTime d;
+    if (ts is Timestamp) d = ts.toDate();
+    else if (ts is String) d = DateTime.tryParse(ts) ?? DateTime.now();
+    else d = DateTime.now();
+    final diff = DateTime.now().difference(d);
+    if (diff.inDays >= 1) return '${diff.inDays}d';
+    if (diff.inHours >= 1) return '${diff.inHours}h';
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}m';
+    return 'now';
+  } catch (_) {
+    return '';
+  }
+}
+
+Color _hexToColor(String hex) {
+  try {
+    var h = hex.replaceAll('#', '');
+    if (h.length == 6) h = 'FF$h';
+    return Color(int.parse(h, radix: 16));
+  } catch (_) {
+    return const Color(0xFFFFE0B2);
   }
 }
 
@@ -932,61 +1209,5 @@ class EventListEmbedded extends StatelessWidget {
   }
 }
 
-class _BottomBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onChanged;
-  final VoidCallback onPlus;
-  const _BottomBar({required this.currentIndex, required this.onChanged, required this.onPlus});
-
-  Color _color(int i) => currentIndex == i ? const Color(0xFF4C1D95) : Colors.black54;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 20),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () => onChanged(0),
-            icon: Icon(Icons.home_rounded, color: _color(0)),
-          ),
-          IconButton(
-            onPressed: () => onChanged(1),
-            icon: Icon(Icons.explore_outlined, color: _color(1)),
-          ),
-          GestureDetector(
-            onTap: onPlus,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF4C1D95),
-              ),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
-          ),
-          IconButton(
-            onPressed: () => onChanged(3),
-            icon: Icon(Icons.group_outlined, color: _color(3)),
-          ),
-          IconButton(
-            onPressed: () => onChanged(4),
-            icon: Icon(Icons.person_outline, color: _color(4)),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 
