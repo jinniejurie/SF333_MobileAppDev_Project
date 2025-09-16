@@ -553,7 +553,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                               ),
                               SizedBox(width: 8),
                               Text(
-                                "Date:${formatDate(event['date'])}",
+                                "Date:${formatDateDynamic(event['date'])}",
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
