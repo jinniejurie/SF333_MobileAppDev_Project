@@ -313,8 +313,22 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 1,
         onChanged: (i) {
-          if (i == 0) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+          switch (i) {
+            case 0:
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              break;
+            case 1:
+              // Already on community discover page
+              break;
+            case 2:
+              // Plus button handled by onPlus
+              break;
+            case 3:
+              Navigator.of(context).pushNamed('/friendsScreen');
+              break;
+            case 4:
+              Navigator.of(context).pushNamed('/chatList');
+              break;
           }
         },
         onPlus: () => Navigator.of(context).pushNamed('/createPost'),

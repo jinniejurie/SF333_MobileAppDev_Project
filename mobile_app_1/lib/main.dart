@@ -6,6 +6,8 @@ import 'firebase_options.dart';
 import 'package:my_app/screens/swipe.dart'; // <-- your CardSwipe page
 import 'package:my_app/screens/community_home.dart';
 import 'package:my_app/screens/create_post_page.dart';
+import 'package:my_app/screens/chat_list_screen.dart';
+import 'package:my_app/screens/friends_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +37,9 @@ class MyApp extends StatelessWidget {
         '/': (context) => const CommunityHome(),
         '/swipe': (context) => const CardSwipe(),
         '/createPost': (context) => const CreatePostPage(),
+        '/chatList': (context) => const ChatListScreen(),
+        '/friendsScreen': (context) => const FriendsScreen(),
+        '/communityDiscover': (context) => const CommunityDiscoverPage(),
       },
       initialRoute: '/',
     );

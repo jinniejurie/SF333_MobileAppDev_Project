@@ -4,6 +4,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 import '../widgets/app_bottom_navbar.dart';
+import '../services/swipe_service.dart';
 
 class CardSwipe extends StatefulWidget {
   const CardSwipe({super.key});
@@ -14,6 +15,8 @@ class CardSwipe extends StatefulWidget {
 
 class _CardSwipeState extends State<CardSwipe> {
   final CardSwiperController _cardController = CardSwiperController();
+  final SwipeService _swipeService = SwipeService();
+  List<String> _userIds = []; // เก็บ userId ของ cards
 
   // Placeholder for the current user's GeoPoint.
   // Replace this with your actual user's location from Firestore. (lat,long)
@@ -68,6 +71,50 @@ class _CardSwipeState extends State<CardSwipe> {
 
   double _degreesToRadians(double degrees) {
     return degrees * pi / 180;
+  }
+
+  // จัดการ swipe action
+  Future<void> _handleSwipe(String userId, bool isLike) async {
+    try {
+      await _swipeService.swipeUser(userId, isLike);
+      
+      if (isLike) {
+        // แสดงข้อความ match ถ้ามี
+        final isMatch = await _swipeService.isMatch(userId);
+        if (isMatch && mounted) {
+          _showMatchDialog(userId);
+        }
+      }
+    } catch (e) {
+      print('Error handling swipe: $e');
+    }
+  }
+
+  // แสดง dialog เมื่อมี match
+  void _showMatchDialog(String matchedUserId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('🎉 It\'s a Match!'),
+        content: const Text('You and this person liked each other! You can now chat with them.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Continue Swiping'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // ไปหน้า chat list
+              Navigator.of(context).pushNamed('/chatList');
+            },
+            child: const Text('Start Chatting'),
+          ),
+        ],
+      ),
+    );
   }
 
 
@@ -140,6 +187,9 @@ class _CardSwipeState extends State<CardSwipe> {
                             );
                           }
 
+                          // เก็บ userIds
+                          _userIds = documents.map((doc) => doc.id).toList();
+                          
                           // Create cards
                           return FutureBuilder<List<Widget>>(
                             future: Future.wait(documents.map((doc) async {
@@ -329,6 +379,14 @@ class _CardSwipeState extends State<CardSwipe> {
                                 cardBuilder:
                                     (context, index, percentX, percentY) =>
                                 cards[index],
+                                onSwipe: (previousIndex, currentIndex, direction) async {
+                                  if (previousIndex != null && previousIndex < _userIds.length) {
+                                    final userId = _userIds[previousIndex];
+                                    final isLike = direction == CardSwiperDirection.right;
+                                    await _handleSwipe(userId, isLike);
+                                  }
+                                  return true;
+                                },
                               );
                             },
                           );
@@ -341,7 +399,10 @@ class _CardSwipeState extends State<CardSwipe> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 16),
                       child: GestureDetector(
-                        onTap: () => _cardController.swipe(CardSwiperDirection.left),
+                        onTap: () async {
+                          // Swipe left (pass)
+                          _cardController.swipe(CardSwiperDirection.left);
+                        },
                         child: Container(
                           decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black),
                           padding: const EdgeInsets.all(20),
@@ -355,7 +416,10 @@ class _CardSwipeState extends State<CardSwipe> {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 16),
                       child: GestureDetector(
-                        onTap: () => _cardController.swipe(CardSwiperDirection.right),
+                        onTap: () async {
+                          // Swipe right (like)
+                          _cardController.swipe(CardSwiperDirection.right);
+                        },
                         child: Container(
                           decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.red),
                           padding: const EdgeInsets.all(20),
@@ -386,10 +450,11 @@ class _CardSwipeState extends State<CardSwipe> {
               break;
             case 3:
               Navigator.of(context).pop();
-              Navigator.of(context).pushNamed('/communityThread');
+              Navigator.of(context).pushNamed('/friendsScreen');
               break;
             case 4:
-              // Chat functionality
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/chatList');
               break;
           }
         },

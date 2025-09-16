@@ -488,6 +488,23 @@ class _CommunityHomeState extends State<CommunityHome> {
         currentIndex: _currentIndex,
         onChanged: (i) {
           setState(() => _currentIndex = i);
+          switch (i) {
+            case 0:
+              // Already on home page
+              break;
+            case 1:
+              Navigator.of(context).pushNamed('/communityDiscover');
+              break;
+            case 2:
+              // Plus button handled by onPlus
+              break;
+            case 3:
+              Navigator.of(context).pushNamed('/friendsScreen');
+              break;
+            case 4:
+              Navigator.of(context).pushNamed('/chatList');
+              break;
+          }
         },
         onPlus: _openComposer,
       ),
@@ -1005,8 +1022,28 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
       ),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 1,
-        onChanged: (_) {},
-        onPlus: () {},
+        onChanged: (i) {
+          switch (i) {
+            case 0:
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              break;
+            case 1:
+              // Already on community discover page
+              break;
+            case 2:
+              // Plus button handled by onPlus
+              break;
+            case 3:
+              Navigator.of(context).pushNamed('/friendsScreen');
+              break;
+            case 4:
+              Navigator.of(context).pushNamed('/chatList');
+              break;
+          }
+        },
+        onPlus: () {
+          Navigator.of(context).pushNamed('/createPost');
+        },
       ),
     );
   }

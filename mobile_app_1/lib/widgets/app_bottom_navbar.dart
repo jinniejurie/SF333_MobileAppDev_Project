@@ -57,14 +57,14 @@ class AppBottomNavBar extends StatelessWidget {
           ),
           IconButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CardSwipe()),
-              );
+              Navigator.of(context).pushNamed('/friendsScreen');
             },
             icon: Icon(Icons.group_outlined, color: _color(3)),
           ),
           IconButton(
-            onPressed: () => onChanged(4),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/chatList');
+            },
             icon: Stack(
               children: [
                 Icon(Icons.chat_bubble_outline, color: _color(4)),
