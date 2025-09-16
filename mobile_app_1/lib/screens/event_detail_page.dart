@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 
 class EventDetailPage extends StatefulWidget {
   final String communityId;
@@ -71,12 +72,31 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 
   String buildTimeRange(Map<String, dynamic> evt) {
-    final dynamic start = evt['date'] ?? evt['startDate'] ?? evt['start_time'];
-    final dynamic end = evt['endDate'] ?? evt['end_time'];
-    final String startStr = formatTime12Dynamic(start);
-    if (startStr.isEmpty) return 'N/A';
-    final String endStr = formatTime12Dynamic(end);
-    return endStr.isEmpty ? startStr : '$startStr - $endStr';
+    // Preferred fields: start_time / end_time (Timestamp or ISO string)
+    final dynamic start = evt['start_time'] ?? evt['startTime'] ?? evt['date'] ?? evt['startDate'];
+    final dynamic end = evt['end_time'] ?? evt['endTime'] ?? evt['endDate'];
+
+    String tryFormat(dynamic v) {
+      final s = formatTime12Dynamic(v);
+      if (s.isNotEmpty) return s;
+      if (v is String && v.trim().isNotEmpty) return v.trim(); // e.g. legacy 'HH:MM'
+      return '';
+    }
+
+    String startStr = tryFormat(start);
+    String endStr = tryFormat(end);
+
+    // Legacy single 'time' field (e.g. '10:00')
+    if (startStr.isEmpty && endStr.isEmpty) {
+      final dynamic simple = evt['time'];
+      final String simpleStr = tryFormat(simple);
+      if (simpleStr.isNotEmpty) return simpleStr;
+    }
+
+    if (startStr.isEmpty && endStr.isEmpty) return 'N/A';
+    if (endStr.isEmpty) return startStr;
+    if (startStr.isEmpty) return endStr;
+    return '$startStr - $endStr';
   }
 
   Future<void> toggleArrayField(String fieldName) async {
@@ -449,68 +469,76 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       style: TextStyle(fontSize: 16, height: 1.5),
                     ),
                     SizedBox(height: 20),
-                    // Event image with rounded corners
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: (() {
-                        final String imageUrl = (event['imageUrl'] ?? '').toString().trim();
-                        if (imageUrl.isEmpty) {
-                          return Container(
-                            width: double.infinity,
-                            height: 250,
-                            color: Colors.grey[300],
-                            alignment: Alignment.center,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.image, color: Colors.grey[700]),
-                                SizedBox(height: 8),
-                                Text('No imageUrl', style: TextStyle(color: Colors.grey[700])),
-                              ],
+                    // Event media (optional): prefer base64 list, then single base64, then URL
+                    Builder(builder: (context) {
+                      // 1) mediaUrls (List<String> base64)
+                      final media = (event['mediaUrls'] is List)
+                          ? List<String>.from((event['mediaUrls'] as List).map((e) => e.toString()))
+                          : const <String>[];
+                      if (media.isNotEmpty) {
+                        if (media.length == 1) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.memory(
+                              base64Decode(media.first),
+                              width: double.infinity,
+                              height: 250,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                             ),
                           );
                         }
-                        // log URL เพื่อดีบัก
-                        // ignore: avoid_print
-                        print('Loading image: ' + imageUrl);
-                        return Image.network(
+                        return SizedBox(
+                          height: 200,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: media.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (context, i) => ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                base64Decode(media[i]),
+                                width: 260,
+                                height: 200,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      // 2) imageBase64 (single)
+                      final String base64Str = (event['imageBase64'] ?? '').toString().trim();
+                      if (base64Str.isNotEmpty) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.memory(
+                            base64Decode(base64Str),
+                            width: double.infinity,
+                            height: 250,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        );
+                      }
+
+                      // 3) imageUrl (network)
+                      final String imageUrl = (event['imageUrl'] ?? '').toString().trim();
+                      if (imageUrl.isEmpty) return const SizedBox.shrink();
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
                           imageUrl,
                           key: ValueKey(imageUrl),
                           width: double.infinity,
                           height: 250,
                           fit: BoxFit.cover,
                           gaplessPlayback: true,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              width: double.infinity,
-                              height: 250,
-                              color: Colors.grey[200],
-                              alignment: Alignment.center,
-                              child: const CircularProgressIndicator(),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            // ignore: avoid_print
-                            print('Image load error for URL: ' + imageUrl + ' -> ' + error.toString());
-                            return Container(
-                              width: double.infinity,
-                              height: 250,
-                              color: Colors.grey[300],
-                              alignment: Alignment.center,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.image_not_supported, color: Colors.grey[700]),
-                                  SizedBox(height: 6),
-                                  Text('Failed to load image', style: TextStyle(color: Colors.grey[700])),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                      })(),
-                    ),
+                          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                        ),
+                      );
+                    }),
                     SizedBox(height: 20),
                     // Event details
                     Container(
@@ -649,7 +677,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                             ),
                             Builder(builder: (context) {
                               final int likesCount = event['likes'].length;
-                              final String label = likesCount == 1 ? 'Like' : 'Likes';
+                              final String label = (likesCount == 1 || likesCount == 0) ? 'Like' : 'Likes';
                               return Text('${formatNumber(likesCount)} $label');
                             }),
                           ],
@@ -664,7 +692,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
                               ),
                               onPressed: () => toggleArrayField('favorites'),
                             ),
-                            Text('${formatNumber(event['favorites'].length)} Interested'),
+                            Builder(builder: (context) {
+                              final int fav = event['favorites'].length;
+                              return Text('${formatNumber(fav)} Interested');
+                            }),
                           ],
                         ),
                         // Upvote
@@ -681,7 +712,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                             ),
                             Builder(builder: (context) {
                               final int upvotesCount = event['upvotes'].length;
-                              final String label = upvotesCount == 1 ? 'Upvote' : 'Upvotes';
+                              final String label = (upvotesCount == 1 || upvotesCount == 0) ? 'Upvote' : 'Upvotes';
                               return Text('${formatNumber(upvotesCount)} $label');
                             }),
                           ],

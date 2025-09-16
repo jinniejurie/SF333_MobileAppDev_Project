@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/app_bottom_navbar.dart';
 import 'event_detail_page.dart';
 import 'create_event_page.dart';
+import 'create_thread_page.dart';
 
 class CommunityThreadPage extends StatefulWidget {
   final String communityId;
@@ -173,98 +174,11 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
 
   Future<void> _createThread() async {
     await _ensureSignedIn();
-    final titleCtrl = TextEditingController();
-    final contentCtrl = TextEditingController();
-    final created = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateThreadPage(communityId: widget.communityId),
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: const [
-                Icon(Icons.edit),
-                SizedBox(width: 8),
-                Text('Create Thread', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18))
-              ]),
-              const SizedBox(height: 12),
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Thread title',
-                  filled: true,
-                  fillColor: Color(0xFFF5F6FF),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: contentCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Content',
-                  filled: true,
-                  fillColor: Color(0xFFF5F6FF),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    if (titleCtrl.text.trim().isEmpty || contentCtrl.text.trim().isEmpty) return;
-                    Navigator.of(context).pop(true);
-                  },
-                  icon: const Icon(Icons.send),
-                  label: const Text('Post'),
-                ),
-              )
-            ],
-          ),
-        );
-      },
     );
-    if (created != true) return;
-
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'demo-user-001';
-    final authorName = FirebaseAuth.instance.currentUser?.displayName ?? 'Anonymous';
-    try {
-      await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(widget.communityId)
-          .collection('threads')
-          .add({
-        'title': titleCtrl.text.trim(),
-        'text': contentCtrl.text.trim(),
-        'authorUid': uid,
-        'authorName': authorName,
-        'createdAt': FieldValue.serverTimestamp(),
-        'likesCount': 0,
-        'commentsCount': 0,
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thread created successfully!')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create thread: $e')),
-      );
-    }
   }
 
   Future<void> _createEvent() async {
@@ -447,7 +361,6 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                             .collection('communities')
                             .doc(widget.communityId)
                             .collection('events')
-                            .orderBy('createdAt', descending: true)
                             .snapshots(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -457,11 +370,70 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                           if (docs.isEmpty) {
                             return const Center(child: Text('No events yet'));
                           }
+                          DateTime? _parseDate(dynamic v) {
+                            try {
+                              if (v is Timestamp) return v.toDate();
+                              if (v is String) {
+                                final parts = v.split('-');
+                                if (parts.length == 3 && parts[0].length <= 2) {
+                                  return DateTime(
+                                    int.parse(parts[2]),
+                                    int.parse(parts[1]),
+                                    int.parse(parts[0]),
+                                  );
+                                }
+                                return DateTime.tryParse(v);
+                              }
+                            } catch (_) {}
+                            return null;
+                          }
+
+                          final now = DateTime.now();
+                          final enriched = docs.map((d) {
+                            final e = d.data();
+                            final List<dynamic> upArr = (e['upvotes'] ?? []) as List<dynamic>;
+                            final int upvoteCount = upArr.length;
+                            DateTime? endDt = _parseDate(e['end_time'] ?? e['endDate']);
+                            DateTime? dateDt = _parseDate(e['date']);
+                            final DateTime eventEdge = endDt ?? dateDt ?? now;
+                            final bool isPast = eventEdge.isBefore(now);
+                            return {
+                              'doc': d,
+                              'data': e,
+                              'upvotes': upvoteCount,
+                              'eventDate': dateDt ?? eventEdge,
+                              'isPast': isPast,
+                            };
+                          }).toList();
+
+                          final upcoming = enriched.where((e) => e['isPast'] == false).toList();
+                          final past = enriched.where((e) => e['isPast'] == true).toList();
+
+                          // Upcoming: sort by upvotes desc, then date asc (nearest first)
+                          upcoming.sort((a, b) {
+                            final int upB = b['upvotes'] as int;
+                            final int upA = a['upvotes'] as int;
+                            if (upB != upA) return upB.compareTo(upA);
+                            final DateTime da = a['eventDate'] as DateTime;
+                            final DateTime db = b['eventDate'] as DateTime;
+                            return da.compareTo(db);
+                          });
+
+                          // Past: keep at bottom; newest first
+                          past.sort((a, b) {
+                            final DateTime da = a['eventDate'] as DateTime;
+                            final DateTime db = b['eventDate'] as DateTime;
+                            return db.compareTo(da);
+                          });
+
+                          final ordered = <Map<String, dynamic>>[...upcoming, ...past];
+
                           return ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            itemCount: docs.length,
+                            itemCount: ordered.length,
                             itemBuilder: (context, index) {
-                              final event = docs[index].data();
+                              final d = ordered[index]['doc'] as QueryDocumentSnapshot<Map<String, dynamic>>;
+                              final event = ordered[index]['data'] as Map<String, dynamic>;
                               final colors = <Color>[
                                 const Color.fromARGB(255, 172, 199, 219),
                                 const Color.fromARGB(255, 145, 203, 145),
@@ -501,7 +473,7 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => EventDetailPage(
-                                        eventId: docs[index].id,
+                                        eventId: d.id,
                                         currentUserId: FirebaseAuth.instance.currentUser?.uid ?? '',
                                         communityId: widget.communityId,
                                       ),
@@ -594,11 +566,7 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _tab == 0 ? _createThread : _createEvent,
-        backgroundColor: const Color(0xFF4C1D95),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: null,
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 1,
         onChanged: (i) {
