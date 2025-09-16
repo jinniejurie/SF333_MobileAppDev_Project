@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
-import 'screens/root_nav.dart';
+import 'screens/community_home.dart';
+import 'screens/swipe.dart';
+import 'screens/create_post_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,8 +31,12 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: RootNav(),
-      home: RootNav(),
+      routes: {
+        '/': (context) => const CommunityHome(),
+        '/swipe': (context) => const CardSwipe(),
+        '/createPost': (context) => const CreatePostPage(),
+      },
+      initialRoute: '/',
     );
   }
 }
