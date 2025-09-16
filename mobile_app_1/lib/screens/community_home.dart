@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
+import 'event_list_page.dart';
 
 class PostItem {
   final String postId;
@@ -138,6 +139,39 @@ class _CommunityHomeState extends State<CommunityHome> {
                             fontWeight: FontWeight.w800,
                           )),
                       const SizedBox(height: 8),
+                      // Tabs under Friendzy: Threads | Event
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Threads',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(width: 28),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const EventListPage(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Event',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
