@@ -13,6 +13,18 @@ class CommunityDiscoverPage extends StatefulWidget {
 }
 
 class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
+  String _searchQuery = '';
+  bool _isSearching = false;
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchQuery = '';
+      }
+    });
+  }
+
   Future<void> _ensureSignedIn() async {
     final auth = FirebaseAuth.instance;
     if (auth.currentUser == null) {
@@ -202,9 +214,32 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Icon(Icons.search, size: 22),
+                  GestureDetector(
+                    onTap: _toggleSearch,
+                    child: const Icon(Icons.search, size: 22),
+                  ),
                 ]),
               ),
+              if (_isSearching) ...[
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value.toLowerCase();
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Search communities...',
+                      prefixIcon: Icon(Icons.search),
+                      filled: true,
+                      fillColor: Color(0xFFF5F6FF),
+                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -214,11 +249,28 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                       return const Center(child: CircularProgressIndicator());
                     }
                     final docs = snapshot.data?.docs ?? [];
+                    
+                    // Filter communities based on search query
+                    final filteredDocs = _searchQuery.isEmpty 
+                        ? docs 
+                        : docs.where((doc) {
+                            final data = doc.data();
+                            final name = (data['name'] ?? '').toString().toLowerCase();
+                            final description = (data['description'] ?? '').toString().toLowerCase();
+                            return name.contains(_searchQuery) || description.contains(_searchQuery);
+                          }).toList();
+                    
+                    if (filteredDocs.isEmpty && _searchQuery.isNotEmpty) {
+                      return const Center(
+                        child: Text('No communities found matching your search'),
+                      );
+                    }
+                    
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: docs.length,
+                      itemCount: filteredDocs.length,
                       itemBuilder: (context, index) {
-                        final data = docs[index].data();
+                        final data = filteredDocs[index].data();
                         final name = (data['name'] ?? 'Unknown').toString();
                         final membersCount = (data['membersCount'] ?? 0) as int;
                         final colorHex = (data['coverColor'] ?? '#FFE0B2').toString();
@@ -237,7 +289,7 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: GestureDetector(
-                                    onTap: () => _joinAndOpen(docs[index].id, name, colorHex),
+                                    onTap: () => _joinAndOpen(filteredDocs[index].id, name, colorHex),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black)),

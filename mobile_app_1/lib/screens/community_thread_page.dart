@@ -23,6 +23,17 @@ class CommunityThreadPage extends StatefulWidget {
 class _CommunityThreadPageState extends State<CommunityThreadPage> {
   int _tab = 0;
   final Set<String> _likedThreadIds = <String>{};
+  String _searchQuery = '';
+  bool _isSearching = false;
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchQuery = '';
+      }
+    });
+  }
 
   Future<void> _ensureSignedIn() async {
     final auth = FirebaseAuth.instance;
@@ -446,10 +457,33 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(widget.communityName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-                    const Icon(Icons.search, size: 22),
+                    GestureDetector(
+                      onTap: _toggleSearch,
+                      child: const Icon(Icons.search, size: 22),
+                    ),
                   ],
                 ),
               ),
+              if (_isSearching) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value.toLowerCase();
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Search threads...',
+                      prefixIcon: Icon(Icons.search),
+                      filled: true,
+                      fillColor: Color(0xFFF5F6FF),
+                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -497,11 +531,31 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                           if (docs.isEmpty) {
                             return const Center(child: Text('No threads yet'));
                           }
+                          
+                          // Filter threads based on search query
+                          final filteredDocs = _searchQuery.isEmpty 
+                              ? docs 
+                              : docs.where((doc) {
+                                  final data = doc.data();
+                                  final title = (data['title'] ?? '').toString().toLowerCase();
+                                  final text = (data['text'] ?? '').toString().toLowerCase();
+                                  final authorName = (data['authorName'] ?? '').toString().toLowerCase();
+                                  return title.contains(_searchQuery) || 
+                                         text.contains(_searchQuery) || 
+                                         authorName.contains(_searchQuery);
+                                }).toList();
+                          
+                          if (filteredDocs.isEmpty && _searchQuery.isNotEmpty) {
+                            return const Center(
+                              child: Text('No threads found matching your search'),
+                            );
+                          }
+                          
                           return ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            itemCount: docs.length,
+                            itemCount: filteredDocs.length,
                             itemBuilder: (context, index) {
-                              final t = docs[index].data();
+                              final t = filteredDocs[index].data();
                               return Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 child: Container(
@@ -541,15 +595,15 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                                         Row(
                                           children: [
                                             InkWell(
-                                              onTap: () => _toggleLike(docs[index].id, t['likesCount'] ?? 0),
+                                              onTap: () => _toggleLike(filteredDocs[index].id, t['likesCount'] ?? 0),
                                               borderRadius: BorderRadius.circular(20),
                                               child: Padding(
                                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                                                 child: Row(children: [
                                                   Icon(
-                                                    _likedThreadIds.contains(docs[index].id) ? Icons.favorite : Icons.favorite_border,
+                                                    _likedThreadIds.contains(filteredDocs[index].id) ? Icons.favorite : Icons.favorite_border,
                                                     size: 18,
-                                                    color: _likedThreadIds.contains(docs[index].id) ? Colors.black : null,
+                                                    color: _likedThreadIds.contains(filteredDocs[index].id) ? Colors.black : null,
                                                   ),
                                                   const SizedBox(width: 6),
                                                   Text('${t['likesCount'] ?? 0}'),
@@ -558,7 +612,7 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                                             ),
                                             const SizedBox(width: 8),
                                             InkWell(
-                                              onTap: () => _openComments(docs[index].id),
+                                              onTap: () => _openComments(filteredDocs[index].id),
                                               borderRadius: BorderRadius.circular(20),
                                               child: Padding(
                                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -595,11 +649,33 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                           if (docs.isEmpty) {
                             return const Center(child: Text('No events yet'));
                           }
+                          
+                          // Filter events based on search query
+                          final filteredEventDocs = _searchQuery.isEmpty 
+                              ? docs 
+                              : docs.where((doc) {
+                                  final data = doc.data();
+                                  final title = (data['title'] ?? '').toString().toLowerCase();
+                                  final description = (data['description'] ?? '').toString().toLowerCase();
+                                  final location = (data['location'] ?? '').toString().toLowerCase();
+                                  final organizer = (data['organizer'] ?? '').toString().toLowerCase();
+                                  return title.contains(_searchQuery) || 
+                                         description.contains(_searchQuery) || 
+                                         location.contains(_searchQuery) ||
+                                         organizer.contains(_searchQuery);
+                                }).toList();
+                          
+                          if (filteredEventDocs.isEmpty && _searchQuery.isNotEmpty) {
+                            return const Center(
+                              child: Text('No events found matching your search'),
+                            );
+                          }
+                          
                           return ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            itemCount: docs.length,
+                            itemCount: filteredEventDocs.length,
                             itemBuilder: (context, index) {
-                              final event = docs[index].data();
+                              final event = filteredEventDocs[index].data();
                               final colors = <Color>[
                                 const Color.fromARGB(255, 172, 199, 219),
                                 const Color.fromARGB(255, 145, 203, 145),
@@ -639,7 +715,7 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => EventDetailPage(
-                                        eventId: docs[index].id,
+                                        eventId: filteredEventDocs[index].id,
                                         currentUserId: FirebaseAuth.instance.currentUser?.uid ?? '',
                                         communityId: widget.communityId,
                                       ),
