@@ -3,14 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:convert';
 
 class EventDetailPage extends StatefulWidget {
-  final String communityId;
   final String eventId;
   final String currentUserId;
+  final String? communityId;
 
-  EventDetailPage({required this.communityId, required this.eventId, required this.currentUserId});
+  EventDetailPage({
+    required this.eventId, 
+    required this.currentUserId,
+    this.communityId,
+  });
 
   @override
   _EventDetailPageState createState() => _EventDetailPageState();
@@ -24,6 +27,37 @@ class _EventDetailPageState extends State<EventDetailPage> {
   @override
   void initState() {
     super.initState();
+  }
+
+  // Helper method to get the correct Firestore collection reference
+  DocumentReference get _eventDocRef {
+    if (widget.communityId != null) {
+      return FirebaseFirestore.instance
+          .collection('communities')
+          .doc(widget.communityId)
+          .collection('events')
+          .doc(widget.eventId);
+    } else {
+      return FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.eventId);
+    }
+  }
+
+  CollectionReference get _commentsRef {
+    if (widget.communityId != null) {
+      return FirebaseFirestore.instance
+          .collection('communities')
+          .doc(widget.communityId)
+          .collection('events')
+          .doc(widget.eventId)
+          .collection('comments');
+    } else {
+      return FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.eventId)
+          .collection('comments');
+    }
   }
 
   String formatTime(Timestamp timestamp) {
@@ -72,31 +106,12 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 
   String buildTimeRange(Map<String, dynamic> evt) {
-    // Preferred fields: start_time / end_time (Timestamp or ISO string)
-    final dynamic start = evt['start_time'] ?? evt['startTime'] ?? evt['date'] ?? evt['startDate'];
-    final dynamic end = evt['end_time'] ?? evt['endTime'] ?? evt['endDate'];
-
-    String tryFormat(dynamic v) {
-      final s = formatTime12Dynamic(v);
-      if (s.isNotEmpty) return s;
-      if (v is String && v.trim().isNotEmpty) return v.trim(); // e.g. legacy 'HH:MM'
-      return '';
-    }
-
-    String startStr = tryFormat(start);
-    String endStr = tryFormat(end);
-
-    // Legacy single 'time' field (e.g. '10:00')
-    if (startStr.isEmpty && endStr.isEmpty) {
-      final dynamic simple = evt['time'];
-      final String simpleStr = tryFormat(simple);
-      if (simpleStr.isNotEmpty) return simpleStr;
-    }
-
-    if (startStr.isEmpty && endStr.isEmpty) return 'N/A';
-    if (endStr.isEmpty) return startStr;
-    if (startStr.isEmpty) return endStr;
-    return '$startStr - $endStr';
+    final dynamic start = evt['date'] ?? evt['startDate'] ?? evt['start_time'];
+    final dynamic end = evt['endDate'] ?? evt['end_time'];
+    final String startStr = formatTime12Dynamic(start);
+    if (startStr.isEmpty) return 'N/A';
+    final String endStr = formatTime12Dynamic(end);
+    return endStr.isEmpty ? startStr : '$startStr - $endStr';
   }
 
   Future<void> toggleArrayField(String fieldName) async {
@@ -106,11 +121,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       );
       return;
     }
-    final DocumentReference docRef = FirebaseFirestore.instance
-        .collection('communities')
-        .doc(widget.communityId)
-        .collection('events')
-        .doc(widget.eventId);
+    final DocumentReference docRef = _eventDocRef;
     try {
       final List<dynamic> array = List.from(event[fieldName] ?? []);
       final bool hasUser = array.contains(widget.currentUserId);
@@ -163,12 +174,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     _commentController.clear();
 
     try {
-      await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(widget.communityId)
-          .collection('events')
-          .doc(widget.eventId)
-          .update({'comments': FieldValue.arrayUnion([newComment])});
+      await _eventDocRef.update({'comments': FieldValue.arrayUnion([newComment])});
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Add comment failed: $e')),
@@ -218,11 +224,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                     final Map<String, dynamic> softDeleted = Map<String, dynamic>.from(original);
                     softDeleted['isDeleted'] = true;
 
-                    final docRef = FirebaseFirestore.instance
-                        .collection('communities')
-                        .doc(widget.communityId)
-                        .collection('events')
-                        .doc(widget.eventId);
+                    final docRef = _eventDocRef;
 
                     // แทนที่จะลบถาวร: ลบอันเดิม แล้วเพิ่มเวอร์ชัน isDeleted:true
                     await docRef.update({
@@ -254,10 +256,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
       context: context,
       builder: (BuildContext context) {
         return ReportDialog(
-          communityId: widget.communityId,
           commentId: commentId,
           eventId: widget.eventId,
           reporterId: widget.currentUserId,
+          communityId: widget.communityId,
         );
       },
     );
@@ -273,7 +275,11 @@ class _EventDetailPageState extends State<EventDetailPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return EventReportDialog(communityId: widget.communityId, eventId: widget.eventId, reporterId: widget.currentUserId);
+        return EventReportDialog(
+          eventId: widget.eventId, 
+          reporterId: widget.currentUserId,
+          communityId: widget.communityId,
+        );
       },
     );
   }
@@ -394,12 +400,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('communities')
-          .doc(widget.communityId)
-          .collection('events')
-          .doc(widget.eventId)
-          .snapshots(),
+      stream: _eventDocRef.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
@@ -469,76 +470,68 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       style: TextStyle(fontSize: 16, height: 1.5),
                     ),
                     SizedBox(height: 20),
-                    // Event media (optional): prefer base64 list, then single base64, then URL
-                    Builder(builder: (context) {
-                      // 1) mediaUrls (List<String> base64)
-                      final media = (event['mediaUrls'] is List)
-                          ? List<String>.from((event['mediaUrls'] as List).map((e) => e.toString()))
-                          : const <String>[];
-                      if (media.isNotEmpty) {
-                        if (media.length == 1) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.memory(
-                              base64Decode(media.first),
-                              width: double.infinity,
-                              height: 250,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    // Event image with rounded corners
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: (() {
+                        final String imageUrl = (event['imageUrl'] ?? '').toString().trim();
+                        if (imageUrl.isEmpty) {
+                          return Container(
+                            width: double.infinity,
+                            height: 250,
+                            color: Colors.grey[300],
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image, color: Colors.grey[700]),
+                                SizedBox(height: 8),
+                                Text('No imageUrl', style: TextStyle(color: Colors.grey[700])),
+                              ],
                             ),
                           );
                         }
-                        return SizedBox(
-                          height: 200,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: media.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 8),
-                            itemBuilder: (context, i) => ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.memory(
-                                base64Decode(media[i]),
-                                width: 260,
-                                height: 200,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-
-                      // 2) imageBase64 (single)
-                      final String base64Str = (event['imageBase64'] ?? '').toString().trim();
-                      if (base64Str.isNotEmpty) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.memory(
-                            base64Decode(base64Str),
-                            width: double.infinity,
-                            height: 250,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                          ),
-                        );
-                      }
-
-                      // 3) imageUrl (network)
-                      final String imageUrl = (event['imageUrl'] ?? '').toString().trim();
-                      if (imageUrl.isEmpty) return const SizedBox.shrink();
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
+                        // log URL เพื่อดีบัก
+                        // ignore: avoid_print
+                        print('Loading image: ' + imageUrl);
+                        return Image.network(
                           imageUrl,
                           key: ValueKey(imageUrl),
                           width: double.infinity,
                           height: 250,
                           fit: BoxFit.cover,
                           gaplessPlayback: true,
-                          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                        ),
-                      );
-                    }),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              width: double.infinity,
+                              height: 250,
+                              color: Colors.grey[200],
+                              alignment: Alignment.center,
+                              child: const CircularProgressIndicator(),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            // ignore: avoid_print
+                            print('Image load error for URL: ' + imageUrl + ' -> ' + error.toString());
+                            return Container(
+                              width: double.infinity,
+                              height: 250,
+                              color: Colors.grey[300],
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.image_not_supported, color: Colors.grey[700]),
+                                  SizedBox(height: 6),
+                                  Text('Failed to load image', style: TextStyle(color: Colors.grey[700])),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      })(),
+                    ),
                     SizedBox(height: 20),
                     // Event details
                     Container(
@@ -560,7 +553,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                               ),
                               SizedBox(width: 8),
                               Text(
-                                "Date: ${formatDateDynamic(event['date'])}",
+                                "Date:${formatDateDynamic(event['date'])}",
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -677,7 +670,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                             ),
                             Builder(builder: (context) {
                               final int likesCount = event['likes'].length;
-                              final String label = (likesCount == 1 || likesCount == 0) ? 'Like' : 'Likes';
+                              final String label = likesCount == 1 ? 'Like' : 'Likes';
                               return Text('${formatNumber(likesCount)} $label');
                             }),
                           ],
@@ -692,10 +685,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                               ),
                               onPressed: () => toggleArrayField('favorites'),
                             ),
-                            Builder(builder: (context) {
-                              final int fav = event['favorites'].length;
-                              return Text('${formatNumber(fav)} Interested');
-                            }),
+                            Text('${formatNumber(event['favorites'].length)} Interested'),
                           ],
                         ),
                         // Upvote
@@ -712,7 +702,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                             ),
                             Builder(builder: (context) {
                               final int upvotesCount = event['upvotes'].length;
-                              final String label = (upvotesCount == 1 || upvotesCount == 0) ? 'Upvote' : 'Upvotes';
+                              final String label = upvotesCount == 1 ? 'Upvote' : 'Upvotes';
                               return Text('${formatNumber(upvotesCount)} $label');
                             }),
                           ],
@@ -869,12 +859,17 @@ class _EventDetailPageState extends State<EventDetailPage> {
 }
 
 class ReportDialog extends StatefulWidget {
-  final String communityId;
   final String commentId;
   final String eventId;
   final String reporterId;
+  final String? communityId;
 
-  ReportDialog({required this.communityId, required this.commentId, required this.eventId, required this.reporterId});
+  ReportDialog({
+    required this.commentId, 
+    required this.eventId, 
+    required this.reporterId,
+    this.communityId,
+  });
 
   @override
   _ReportDialogState createState() => _ReportDialogState();
@@ -883,6 +878,21 @@ class ReportDialog extends StatefulWidget {
 class _ReportDialogState extends State<ReportDialog> {
   String? selectedReportType;
   final TextEditingController _detailsController = TextEditingController();
+
+  // Helper method to get the correct Firestore collection reference
+  DocumentReference get _eventDocRef {
+    if (widget.communityId != null) {
+      return FirebaseFirestore.instance
+          .collection('communities')
+          .doc(widget.communityId)
+          .collection('events')
+          .doc(widget.eventId);
+    } else {
+      return FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.eventId);
+    }
+  }
 
   final List<Map<String, String>> reportTypes = [
     {'value': 'spam', 'label': 'Spam'},
@@ -989,11 +999,7 @@ class _ReportDialogState extends State<ReportDialog> {
         'createdAt': Timestamp.now(),
         'status': 'open',
       };
-      await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(widget.communityId)
-          .collection('events')
-          .doc(widget.eventId)
+      await _eventDocRef
           .collection('commentReports')
           .add(reportDoc);
 
@@ -1026,11 +1032,15 @@ class _ReportDialogState extends State<ReportDialog> {
 }
 
 class EventReportDialog extends StatefulWidget {
-  final String communityId;
   final String eventId;
   final String reporterId;
+  final String? communityId;
 
-  EventReportDialog({required this.communityId, required this.eventId, required this.reporterId});
+  EventReportDialog({
+    required this.eventId, 
+    required this.reporterId,
+    this.communityId,
+  });
 
   @override
   _EventReportDialogState createState() => _EventReportDialogState();
@@ -1040,6 +1050,21 @@ class _EventReportDialogState extends State<EventReportDialog> {
   String? selectedReportType;
   final TextEditingController _detailsController = TextEditingController();
   bool _submitting = false;
+
+  // Helper method to get the correct Firestore collection reference
+  DocumentReference get _eventDocRef {
+    if (widget.communityId != null) {
+      return FirebaseFirestore.instance
+          .collection('communities')
+          .doc(widget.communityId)
+          .collection('events')
+          .doc(widget.eventId);
+    } else {
+      return FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.eventId);
+    }
+  }
 
   final List<Map<String, String>> reportTypes = [
     {'value': 'spam', 'label': 'Spam'},
@@ -1152,11 +1177,7 @@ class _EventReportDialogState extends State<EventReportDialog> {
         'createdAt': Timestamp.now(),
         'status': 'open',
       };
-      await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(widget.communityId)
-          .collection('events')
-          .doc(widget.eventId)
+      await _eventDocRef
           .collection('reports')
           .add(reportDoc);
       if (mounted) Navigator.pop(context);

@@ -65,7 +65,29 @@ class AppBottomNavBar extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => onChanged(4),
-            icon: Icon(Icons.person_outline, color: _color(4)),
+            icon: Stack(
+              children: [
+                Icon(Icons.chat_bubble_outline, color: _color(4)),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.blue,
+                      border: Border.all(color: Colors.white, width: 1),
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      size: 8,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

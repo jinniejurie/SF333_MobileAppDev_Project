@@ -91,6 +91,8 @@ class CommunityHome extends StatefulWidget {
 class _CommunityHomeState extends State<CommunityHome> {
   int _currentIndex = 0;
   final Set<String> _likedPostIds = <String>{};
+  String _searchQuery = '';
+  bool _isSearching = false;
 
   Future<void> _openComposer() async {
     if (_currentIndex == 1) {
@@ -232,6 +234,15 @@ class _CommunityHomeState extends State<CommunityHome> {
     );
   }
 
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchQuery = '';
+      }
+    });
+  }
+
   Future<void> _openTagSearch() async {
     final controller = TextEditingController();
     List<String> suggestions = [];
@@ -362,10 +373,27 @@ class _CommunityHomeState extends State<CommunityHome> {
                             )),
                         SizedBox(width: 8),
                         GestureDetector(
-                          onTap: _openTagSearch,
+                          onTap: _toggleSearch,
                           child: const Icon(Icons.search, size: 22),
                         ),
                       ]),
+                      if (_isSearching) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value.toLowerCase();
+                            });
+                          },
+                          decoration: const InputDecoration(
+                            hintText: 'Search posts...',
+                            prefixIcon: Icon(Icons.search),
+                            filled: true,
+                            fillColor: Color(0xFFF5F6FF),
+                            border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -413,12 +441,29 @@ class _CommunityHomeState extends State<CommunityHome> {
                     if (docs.isEmpty) {
                       return const Center(child: Text('No posts yet'));
                     }
-                    final posts = docs.map((d) => PostItem.fromDoc(d)).toList();
+                    final allPosts = docs.map((d) => PostItem.fromDoc(d)).toList();
+                    
+                    // Filter posts based on search query
+                    final filteredPosts = _searchQuery.isEmpty 
+                        ? allPosts 
+                        : allPosts.where((post) {
+                            return post.content.toLowerCase().contains(_searchQuery) ||
+                                   (post.title?.toLowerCase().contains(_searchQuery) ?? false) ||
+                                   post.authorName.toLowerCase().contains(_searchQuery) ||
+                                   post.tags.any((tag) => tag.toLowerCase().contains(_searchQuery));
+                          }).toList();
+                    
+                    if (filteredPosts.isEmpty && _searchQuery.isNotEmpty) {
+                      return const Center(
+                        child: Text('No posts found matching your search'),
+                      );
+                    }
+                    
                     return ListView.builder(
                       padding: const EdgeInsets.only(top: 0),
-                      itemCount: posts.length,
+                      itemCount: filteredPosts.length,
                       itemBuilder: (context, index) {
-                        final post = posts[index];
+                        final post = filteredPosts[index];
                         final isLiked = _likedPostIds.contains(post.postId);
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

@@ -398,7 +398,29 @@ class _CardSwipeState extends State<CardSwipe> {
               child: const Icon(Icons.add, color: Colors.white),
             ),
             const Icon(Icons.group_outlined, color: Color(0xFF4C1D95)),
-            const Icon(Icons.person_outline, color: Colors.black54),
+            Stack(
+              children: [
+                const Icon(Icons.chat_bubble_outline, color: Colors.black54),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.blue,
+                      border: Border.all(color: Colors.white, width: 1),
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      size: 8,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
