@@ -13,7 +13,7 @@ class InterestsPage extends StatefulWidget {
 class _InterestsPageState extends State<InterestsPage> {
   List<String> options = [];      // ตัวเลือกทั้งหมด
   List<String> selected = [];     // ตัวที่ผู้ใช้เลือก
-  bool _loading = false;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -21,58 +21,61 @@ class _InterestsPageState extends State<InterestsPage> {
     _loadInterests();
   }
 
-  // ดึงตัวเลือกทั้งหมดจาก collection "interest"
   Future<void> _loadInterests() async {
     setState(() => _loading = true);
     try {
-      final snapshot =
-      await FirebaseFirestore.instance.collection("interest").get();
+      // ดึงตัวเลือกทั้งหมดจาก collection "interest"
+      final snapshot = await FirebaseFirestore.instance.collection("interest").get();
       options = snapshot.docs.map((doc) => doc['name'] as String).toList();
 
       // ดึงข้อมูลผู้ใช้ปัจจุบัน
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        final references = userDoc.data()?['interest'] as List<dynamic>?;
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final rawReferences = userDoc.data()?['interest'] as List<dynamic>?;
 
         // แปลง DocumentReference เป็นชื่อ
-        selected = await _getInterests(references);
+        selected = await _getInterests(rawReferences);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error loading interests: $e")));
+      }
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  // แปลง list ของ DocumentReference เป็นชื่อ
   Future<List<String>> _getInterests(List<dynamic>? references) async {
     if (references == null || references.isEmpty) return [];
+
     List<String> interestNames = [];
+
     for (var ref in references) {
-      if (ref is DocumentReference) {
-        final doc = await ref.get();
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>?;
-          if (data != null && data['name'] != null) {
-            interestNames.add(data['name'] as String);
+      try {
+        if (ref is DocumentReference) {
+          final doc = await ref.get();
+          if (doc.exists) {
+            final data = doc.data() as Map<String, dynamic>?;
+            if (data != null && data['name'] != null) {
+              interestNames.add(data['name'] as String);
+            }
           }
+        } else {
+          debugPrint('⚠️ Skipped non-DocumentReference: $ref');
         }
+      } catch (e) {
+        debugPrint('❌ Error reading interest: $e');
       }
     }
+
     return interestNames;
   }
 
   Future<void> _saveInterests() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in")),
-      );
-      return;
-    }
+    if (user == null) return;
 
     try {
       setState(() => _loading = true);
@@ -80,7 +83,7 @@ class _InterestsPageState extends State<InterestsPage> {
       // แปลงชื่อกลับเป็น DocumentReference
       final interestRefs = await FirebaseFirestore.instance
           .collection('interest')
-          .where('name', whereIn: selected)
+          .where('name', whereIn: selected.isEmpty ? [''] : selected)
           .get()
           .then((snap) => snap.docs.map((doc) => doc.reference).toList());
 
@@ -89,15 +92,18 @@ class _InterestsPageState extends State<InterestsPage> {
           .doc(user.uid)
           .set({"interest": interestRefs}, SetOptions(merge: true));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Interests saved")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Interests saved")));
+        Navigator.pushNamed(context, '/final'); // ไปหน้าถัดไป
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error saving interests: $e")));
+      }
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -108,25 +114,28 @@ class _InterestsPageState extends State<InterestsPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              "Select Interests",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+          const SizedBox(height: 10),
+          const Text(
+            "Select Interests",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Expanded(
-            child: ListView(
-              children: options.map((interest) {
-                return CheckboxListTile(
-                  title: Text(interest),
-                  value: selected.contains(interest),
-                  onChanged: (checked) {
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: options.map((o) {
+                final sel = selected.contains(o);
+                return ChoiceChip(
+                  label: Text(o),
+                  selected: sel,
+                  onSelected: (v) {
                     setState(() {
-                      if (checked == true) {
-                        selected.add(interest);
+                      if (v) {
+                        selected.add(o);
                       } else {
-                        selected.remove(interest);
+                        selected.remove(o);
                       }
                     });
                   },
@@ -134,9 +143,19 @@ class _InterestsPageState extends State<InterestsPage> {
               }).toList(),
             ),
           ),
-          ElevatedButton(
-            onPressed: _saveInterests,
-            child: const Text("Save"),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _saveInterests,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              child: const Text('Next →'),
+            ),
           ),
         ],
       ),

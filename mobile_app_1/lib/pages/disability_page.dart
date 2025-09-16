@@ -3,17 +3,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/base_page.dart';
 
-class DisabilitiesPage extends StatefulWidget {
-  const DisabilitiesPage({super.key});
+class DisabilityPage extends StatefulWidget {
+  const DisabilityPage({super.key});
 
   @override
-  State<DisabilitiesPage> createState() => _DisabilitiesPageState();
+  State<DisabilityPage> createState() => _DisabilityPageState();
 }
 
-class _DisabilitiesPageState extends State<DisabilitiesPage> {
-  List<DocumentSnapshot> options = []; // all disability docs
-  List<String> selectedIds = [];       // selected doc IDs
-  bool _loading = false;
+class _DisabilityPageState extends State<DisabilityPage> {
+  List<String> options = []; // ชื่อ disability ทั้งหมด
+  List<String> selected = []; // ชื่อ disability ที่เลือก
+  bool _loading = true;
 
   @override
   void initState() {
@@ -24,28 +24,39 @@ class _DisabilitiesPageState extends State<DisabilitiesPage> {
   Future<void> _loadDisabilities() async {
     setState(() => _loading = true);
     try {
-      // Load all disability options
+      // ดึงตัวเลือกทั้งหมดจาก collection "disability"
       final snapshot =
       await FirebaseFirestore.instance.collection("disability").get();
-      options = snapshot.docs;
+      options = snapshot.docs.map((doc) => doc['name'] as String? ?? doc.id).toList();
 
-      // Load current user's disability IDs
+      // ดึงข้อมูลผู้ใช้ปัจจุบัน
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final userDoc =
         await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+
+        // ดึงฟิลด์ disability เป็น List<DocumentReference>
         final references = userDoc.data()?['disability'] as List<dynamic>?;
 
-        selectedIds = references
-            ?.whereType<DocumentReference>()
-            .map((ref) => ref.id)
-            .toList() ??
-            [];
+        // แปลง DocumentReference เป็นชื่อ
+        if (references != null) {
+          selected = [];
+          for (var ref in references) {
+            if (ref is DocumentReference) {
+              final doc = await ref.get();
+              if (doc.exists && doc.data() != null) {
+                final data = doc.data() as Map<String, dynamic>;
+                selected.add(data['name'] as String);
+              }
+            }
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error loading: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading disabilities: $e")),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -54,34 +65,35 @@ class _DisabilitiesPageState extends State<DisabilitiesPage> {
 
   Future<void> _saveDisabilities() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("User not logged in")));
-      return;
-    }
+    if (user == null) return;
 
     try {
       setState(() => _loading = true);
 
-      // Map selected IDs back to DocumentReference
-      final disabilityRefs = options
-          .where((doc) => selectedIds.contains(doc.id))
-          .map((doc) => doc.reference)
-          .toList();
+      // แปลงชื่อกลับเป็น DocumentReference
+      final disabilityRefs = await FirebaseFirestore.instance
+          .collection('disability')
+          .where('name', whereIn: selected.isEmpty ? [''] : selected)
+          .get()
+          .then((snap) => snap.docs.map((doc) => doc.reference).toList());
 
+      // บันทึกลง firestore
       await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
           .set({"disability": disabilityRefs}, SetOptions(merge: true));
 
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Disabilities saved")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Disabilities saved")),
+        );
+        Navigator.pushNamed(context, '/interests'); // ไปหน้าต่อไป
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error saving: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error saving disabilities: $e")),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -95,28 +107,28 @@ class _DisabilitiesPageState extends State<DisabilitiesPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              "Select Disabilities",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+          const SizedBox(height: 10),
+          const Text(
+            "How can we support your needs?",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Expanded(
-            child: ListView(
-              children: options.map((doc) {
-                final id = doc.id;
-                final name = doc['name'] as String? ?? id;
-
-                return CheckboxListTile(
-                  title: Text(name),
-                  value: selectedIds.contains(id),
-                  onChanged: (checked) {
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: options.map((o) {
+                final sel = selected.contains(o);
+                return ChoiceChip(
+                  label: Text(o),
+                  selected: sel,
+                  onSelected: (v) {
                     setState(() {
-                      if (checked == true) {
-                        selectedIds.add(id);
+                      if (v) {
+                        selected.add(o);
                       } else {
-                        selectedIds.remove(id);
+                        selected.remove(o);
                       }
                     });
                   },
@@ -124,10 +136,21 @@ class _DisabilitiesPageState extends State<DisabilitiesPage> {
               }).toList(),
             ),
           ),
-          ElevatedButton(
-            onPressed: _saveDisabilities,
-            child: const Text("Save"),
-          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _saveDisabilities,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 30, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              child: const Text('Next →'),
+            ),
+          )
         ],
       ),
     );

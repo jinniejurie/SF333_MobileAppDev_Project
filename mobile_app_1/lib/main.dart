@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomePage(),
         '/signup': (context) => const SignUpPage(),
         '/login': (context) => const LoginPage(),
-        '/disability': (context) => const DisabilitiesPage(), // ✅ ใช้ชื่อ class นี้
+        '/disability': (context) => const DisabilityPage(), // ✅ ใช้ชื่อ class นี้
         '/interests': (context) => InterestsPage(),
         '/final': (context) => const FinalProfilePage(),
 
