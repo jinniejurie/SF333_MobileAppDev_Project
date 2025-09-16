@@ -1,13 +1,15 @@
 // lib/screens/event_list_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'event_detail_page.dart';
 
 class EventListPage extends StatelessWidget {
-  final String currentUserId = "uid1"; // Dummy user
+  const EventListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Event List'),
