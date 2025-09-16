@@ -25,28 +25,37 @@ class _DisabilityPageState extends State<DisabilityPage> {
     setState(() => _loading = true);
     try {
       // ดึงตัวเลือกทั้งหมดจาก collection "disability"
-      final snapshot =
-      await FirebaseFirestore.instance.collection("disability").get();
+      final snapshot = await FirebaseFirestore.instance.collection("disability").get();
       options = snapshot.docs.map((doc) => doc['name'] as String? ?? doc.id).toList();
 
       // ดึงข้อมูลผู้ใช้ปัจจุบัน
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
 
-        // ดึงฟิลด์ disability เป็น List<DocumentReference>
         final references = userDoc.data()?['disability'] as List<dynamic>?;
 
-        // แปลง DocumentReference เป็นชื่อ
         if (references != null) {
           selected = [];
+
           for (var ref in references) {
+            DocumentReference docRef;
+
             if (ref is DocumentReference) {
-              final doc = await ref.get();
-              if (doc.exists && doc.data() != null) {
-                final data = doc.data() as Map<String, dynamic>;
-                selected.add(data['name'] as String);
+              docRef = ref;
+            } else if (ref is String) {
+              docRef = FirebaseFirestore.instance.doc(ref);
+            } else {
+              debugPrint('⚠️ Skipped invalid disability reference: $ref');
+              continue;
+            }
+
+            final doc = await docRef.get();
+            if (doc.exists && doc.data() != null) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = data['name'] as String?;
+              if (name != null && !selected.contains(name)) {
+                selected.add(name);
               }
             }
           }
@@ -70,14 +79,12 @@ class _DisabilityPageState extends State<DisabilityPage> {
     try {
       setState(() => _loading = true);
 
-      // แปลงชื่อกลับเป็น DocumentReference
       final disabilityRefs = await FirebaseFirestore.instance
           .collection('disability')
           .where('name', whereIn: selected.isEmpty ? [''] : selected)
           .get()
           .then((snap) => snap.docs.map((doc) => doc.reference).toList());
 
-      // บันทึกลง firestore
       await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
@@ -126,7 +133,7 @@ class _DisabilityPageState extends State<DisabilityPage> {
                   onSelected: (v) {
                     setState(() {
                       if (v) {
-                        selected.add(o);
+                        if (!selected.contains(o)) selected.add(o);
                       } else {
                         selected.remove(o);
                       }
@@ -143,10 +150,8 @@ class _DisabilityPageState extends State<DisabilityPage> {
               onPressed: _saveDisabilities,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 30, vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
               child: const Text('Next →'),
             ),

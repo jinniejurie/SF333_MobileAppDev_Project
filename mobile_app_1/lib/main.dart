@@ -4,13 +4,12 @@ import 'pages/home_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/login_page.dart';
 import 'pages/disability_page.dart';
-import 'pages/interests_page.dart'; // <-- เพิ่มบรรทัดนี้
-import 'pages/final_profile_page.dart'; // <-- เพิ่มบรรทัดนี้
-
+import 'pages/interests_page.dart';
+import 'pages/final_profile_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // ✅ อย่าลืม init Firebase
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -24,14 +23,13 @@ class MyApp extends StatelessWidget {
       title: 'My App',
       initialRoute: '/',
       routes: {
-        '/': (context) => const HomePage(),
-        '/signup': (context) => const SignUpPage(),
+        '/': (context) => InterestsPage(),
+        '/signup': (context) => SignUpPage(),  // ลบ const ออก
         '/login': (context) => const LoginPage(),
-        '/disability': (context) => const DisabilityPage(), // ✅ ใช้ชื่อ class นี้
-        '/interests': (context) => InterestsPage(),
+        '/disability': (context) => const DisabilityPage(),
+        '/interests': (context) => const HomePage(),
         '/final': (context) => const FinalProfilePage(),
-
-      }, // <-- เอา comma หลังวงเล็บปิดออก หรือปล่อยก็ได้
+      },
     );
   }
 }

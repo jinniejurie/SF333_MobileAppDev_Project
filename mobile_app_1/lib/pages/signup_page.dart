@@ -4,8 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-
+// ลบ import firebase_storage เพราะไม่ใช้แล้ว
+import 'dart:convert';
 import '../widgets/base_page.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -44,11 +44,23 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _pickAvatar() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
       setState(() {
         _avatar = File(picked.path);
       });
+    }
+  }
+
+  Future<String?> _convertAvatarToBase64() async {
+    if (_avatar == null) return null;
+    try {
+      final bytes = await _avatar!.readAsBytes();
+      String base64Str = base64Encode(bytes);
+      return base64Str;
+    } catch (e) {
+      print("Avatar conversion to Base64 failed: $e");
+      return null;
     }
   }
 
@@ -84,19 +96,14 @@ class _SignUpPageState extends State<SignUpPage> {
       );
       final uid = userCredential.user!.uid;
 
-      String? avatarUrl;
-
-      // 🔹 อัปโหลด avatar ไป Firebase Storage (ถ้ามี)
+      // 🔹 แปลง avatar เป็น Base64 (ถ้ามี)
+      String? avatarBase64;
       if (_avatar != null) {
-        try {
-          final ref = FirebaseStorage.instance.ref().child("avatars/$uid.jpg");
-          await ref.putFile(_avatar!);
-          avatarUrl = await ref.getDownloadURL();
-        } catch (e) {
-          // ถ้า upload fail ก็ไม่ให้หยุด signup
-          print("Avatar upload failed: $e");
+        avatarBase64 = await _convertAvatarToBase64();
+        if (avatarBase64 == null) {
+          // ถ้าแปลงไม่สำเร็จ
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Avatar upload failed, continuing signup")),
+            const SnackBar(content: Text("Failed to convert avatar image, continuing without avatar")),
           );
         }
       }
@@ -107,7 +114,7 @@ class _SignUpPageState extends State<SignUpPage> {
         "dob": _pickedDob!.toIso8601String(),
         "gender": _gender,
         "email": _email.text.trim(),
-        "avatar": avatarUrl,
+        "avatarBase64": avatarBase64, // เก็บ Base64 string หรือ null ถ้าไม่มีภาพ
         "createdAt": FieldValue.serverTimestamp(),
       });
 
@@ -115,7 +122,7 @@ class _SignUpPageState extends State<SignUpPage> {
         const SnackBar(content: Text("Signup successful!")),
       );
 
-      // 🔹 ไปหน้า disability ต่อแม้ avatar upload fail
+      // 🔹 ไปหน้า disability ต่อ
       Navigator.pushNamed(context, '/disability');
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -125,7 +132,6 @@ class _SignUpPageState extends State<SignUpPage> {
       setState(() => _loading = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -192,8 +198,7 @@ class _SignUpPageState extends State<SignUpPage> {
               TextFormField(
                 controller: _confirm,
                 obscureText: true,
-                decoration:
-                const InputDecoration(labelText: 'Confirm Password'),
+                decoration: const InputDecoration(labelText: 'Confirm Password'),
                 validator: (v) =>
                 (v == null || v.isEmpty) ? 'Confirm password' : null,
               ),
@@ -202,8 +207,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 onPressed: _loading ? null : _signup,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 30, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30)),
                 ),
@@ -215,8 +219,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 )
                     : const Text(
                   'Next →',
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ],

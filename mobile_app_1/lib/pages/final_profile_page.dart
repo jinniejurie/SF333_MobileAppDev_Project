@@ -34,12 +34,17 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
     try {
       final doc =
       await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        if (mounted) {
+          // Handle case where user document does not exist.
+        }
+        return;
+      }
 
       _userData = doc.data();
       _bioController = TextEditingController(text: _userData?['bio'] ?? '');
 
-      // แปลงพิกัดเป็น location
+      // Translate coordinates to location name
       if (_userData?['latitude'] != null && _userData?['longitude'] != null) {
         try {
           List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -56,30 +61,45 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
         }
       }
 
-      // แปลง interest จาก DocumentReference เป็น List<String>
+      // **CORRECTED CODE BLOCK:** Convert interest references to a list of names
       if (_userData?['interest'] != null) {
         List<dynamic> refs = _userData!['interest'];
         List<String> interestNames = [];
+
         for (var ref in refs) {
-          if (ref is DocumentReference) {
-            final d = await ref.get();
+          try {
+            DocumentReference docRef;
+            if (ref is DocumentReference) {
+              docRef = ref;
+            } else if (ref is String) {
+              docRef = FirebaseFirestore.instance.doc(ref);
+            } else {
+              debugPrint('⚠️ Skipped invalid interest reference: ${ref.runtimeType}');
+              continue;
+            }
+
+            final d = await docRef.get();
             if (d.exists) {
-              final data = d.data() as Map<String, dynamic>?; // cast
+              final data = d.data() as Map<String, dynamic>?;
               if (data != null && data['name'] != null) {
                 interestNames.add(data['name'] as String);
               }
             }
-          } else if (ref is String) {
-            interestNames.add(ref);
+          } catch (e) {
+            debugPrint('❌ Error fetching interest document: $e');
           }
         }
         _userData!['interest'] = interestNames;
       }
 
-      // disability
-      _userData!['disability'] = List<String>.from(_userData?['disability'] ?? []);
+      // **FIXED CODE BLOCK:** Convert disability references to a list of names
+      if (_userData?['disability'] != null) {
+        _userData!['disability'] = await _getDisabilities(_userData!['disability']);
+      } else {
+        _userData!['disability'] = [];
+      }
 
-      // คำนวณ profile completion
+      // Calculate and update profile completion
       int newCompletion = _calculateProfileCompletion(_userData!);
       if ((_userData?['profileCompletion'] ?? 0) != newCompletion) {
         await FirebaseFirestore.instance
@@ -89,12 +109,47 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
         _userData?['profileCompletion'] = newCompletion;
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading profile: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading profile: $e")),
+        );
+      }
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
+  }
+
+  // Helper method to get disability names from references
+  Future<List<String>> _getDisabilities(List<dynamic>? references) async {
+    if (references == null || references.isEmpty) return [];
+
+    List<String> disabilityNames = [];
+    for (var ref in references) {
+      try {
+        DocumentReference docRef;
+        if (ref is DocumentReference) {
+          docRef = ref;
+        } else if (ref is String) {
+          docRef = FirebaseFirestore.instance.doc(ref);
+        } else {
+          debugPrint('⚠️ Skipped invalid disability reference: $ref');
+          continue;
+        }
+
+        final doc = await docRef.get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data != null && data['name'] != null) {
+            disabilityNames.add(data['name'] as String);
+          }
+        }
+      } catch (e) {
+        debugPrint('❌ Error reading disability: $e');
+      }
+    }
+    return disabilityNames;
   }
 
   int _calculateProfileCompletion(Map<String, dynamic> data) {
@@ -139,19 +194,29 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
     int newCompletion = _calculateProfileCompletion({...?_userData, ...updatedData});
     updatedData['profileCompletion'] = newCompletion;
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .update(updatedData);
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update(updatedData);
 
-    setState(() {
-      _userData = {...?_userData, ...updatedData};
-      _newAvatarPath = null;
-    });
+      setState(() {
+        _userData = {...?_userData, ...updatedData};
+        _newAvatarPath = null;
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile saved successfully")),
-    );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile saved successfully")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error saving profile: $e")),
+        );
+      }
+    }
   }
 
   @override
@@ -170,13 +235,12 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
 
     final name = _userData?['name'] ?? '';
     final dob = _userData?['dob'] != null
-        ? DateTime.parse(_userData!['dob'])
+        ? DateTime.tryParse(_userData!['dob'])
         : null;
     final gender = _userData?['gender'] ?? '';
     final avatarUrl = _newAvatarPath ?? _userData?['avatar'] as String?;
     final interest = List<String>.from(_userData?['interest'] ?? []);
     final disability = List<String>.from(_userData?['disability'] ?? []);
-    final bio = _bioController.text;
     final profileCompletion = _userData?['profileCompletion'] ?? 0;
 
     return Scaffold(
@@ -242,10 +306,10 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
               width: double.infinity,
               margin: const EdgeInsets.only(top: 20),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7FBFF),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF7FBFF),
                 borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
+                BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

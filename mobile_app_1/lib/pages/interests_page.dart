@@ -34,7 +34,7 @@ class _InterestsPageState extends State<InterestsPage> {
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         final rawReferences = userDoc.data()?['interest'] as List<dynamic>?;
 
-        // แปลง DocumentReference เป็นชื่อ
+        // แปลง DocumentReference หรือ path string เป็นชื่อ
         selected = await _getInterests(rawReferences);
       }
     } catch (e) {
@@ -54,16 +54,24 @@ class _InterestsPageState extends State<InterestsPage> {
 
     for (var ref in references) {
       try {
+        DocumentReference docRef;
+
         if (ref is DocumentReference) {
-          final doc = await ref.get();
-          if (doc.exists) {
-            final data = doc.data() as Map<String, dynamic>?;
-            if (data != null && data['name'] != null) {
-              interestNames.add(data['name'] as String);
-            }
-          }
+          docRef = ref;
+        } else if (ref is String) {
+          // ถ้าเป็น string path ให้แปลงเป็น DocumentReference
+          docRef = FirebaseFirestore.instance.doc(ref);
         } else {
-          debugPrint('⚠️ Skipped non-DocumentReference: $ref');
+          debugPrint('⚠️ Skipped invalid interest reference: $ref');
+          continue;
+        }
+
+        final doc = await docRef.get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data != null && data['name'] != null) {
+            interestNames.add(data['name'] as String);
+          }
         }
       } catch (e) {
         debugPrint('❌ Error reading interest: $e');
