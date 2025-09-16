@@ -1,0 +1,74 @@
+import 'package:flutter/material.dart';
+import '../screens/community_discover_page.dart';
+import '../screens/swipe.dart';
+
+class AppBottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+  final VoidCallback onPlus;
+  
+  const AppBottomNavBar({
+    super.key,
+    required this.currentIndex,
+    required this.onChanged,
+    required this.onPlus,
+  });
+
+  Color _color(int i) => currentIndex == i ? const Color(0xFF4C1D95) : Colors.black54;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 20),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: () => onChanged(0),
+            icon: Icon(Icons.home_rounded, color: _color(0)),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
+              );
+            },
+            icon: Icon(Icons.explore_outlined, color: _color(1)),
+          ),
+          GestureDetector(
+            onTap: onPlus,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF4C1D95),
+              ),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CardSwipe()),
+              );
+            },
+            icon: Icon(Icons.group_outlined, color: _color(3)),
+          ),
+          IconButton(
+            onPressed: () => onChanged(4),
+            icon: Icon(Icons.person_outline, color: _color(4)),
+          ),
+        ],
+      ),
+    );
+  }
+}
