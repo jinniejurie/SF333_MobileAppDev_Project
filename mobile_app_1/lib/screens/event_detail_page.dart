@@ -78,6 +78,12 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 
   Future<void> toggleArrayField(String fieldName) async {
+    if (widget.currentUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to perform this action.')),
+      );
+      return;
+    }
     final DocumentReference docRef = FirebaseFirestore.instance
         .collection('events')
         .doc(widget.eventId);
@@ -112,6 +118,12 @@ class _EventDetailPageState extends State<EventDetailPage> {
   Future<void> addComment() async {
     final String text = _commentController.text.trim();
     if (text.isEmpty) return;
+    if (widget.currentUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to comment.')),
+      );
+      return;
+    }
 
     final Map<String, dynamic> newComment = {
       'id': 'comment_${DateTime.now().microsecondsSinceEpoch}',
@@ -219,6 +231,12 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 
   void showEventReportDialog() {
+    if (widget.currentUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to report this event.')),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -548,10 +566,61 @@ class _EventDetailPageState extends State<EventDetailPage> {
                         ],
                       ),
                     ),
+                    SizedBox(height: 12),
+                    // Going pill under location box (full width)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => showRegisterConfirmation(),
+                            child: Container(
+                              height: 56,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: Colors.black,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '${event['registered'].length}',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(registered ? Icons.how_to_reg : Icons.how_to_reg_outlined, size: 16, color: Colors.white),
+                                      SizedBox(width: 6),
+                                      const Text(
+                                        'Going',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
+                        // Like
                         Row(
                           children: [
                             IconButton(
@@ -563,37 +632,27 @@ class _EventDetailPageState extends State<EventDetailPage> {
                               ),
                               onPressed: () => toggleArrayField('likes'),
                             ),
-                            Text(formatNumber(event['likes'].length)),
+                            Builder(builder: (context) {
+                              final int likesCount = event['likes'].length;
+                              final String label = likesCount == 1 ? 'Like' : 'Likes';
+                              return Text('${formatNumber(likesCount)} $label');
+                            }),
                           ],
                         ),
+                        // Interested (favorites) next to Like
                         Row(
                           children: [
                             IconButton(
                               icon: Icon(
                                 favorited ? Icons.star : Icons.star_border,
-                                color: favorited
-                                    ? const Color.fromARGB(255, 235, 218, 64)
-                                    : Colors.black,
+                                color: favorited ? const Color.fromARGB(255, 235, 218, 64) : Colors.black,
                               ),
                               onPressed: () => toggleArrayField('favorites'),
                             ),
-                            Text(formatNumber(event['favorites'].length)),
+                            Text('${formatNumber(event['favorites'].length)} Interested'),
                           ],
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                registered
-                                    ? Icons.how_to_reg
-                                    : Icons.how_to_reg_outlined,
-                                color: Colors.black,
-                              ),
-                              onPressed: () => showRegisterConfirmation(),
-                            ),
-                            Text(formatNumber(event['registered'].length)),
-                          ],
-                        ),
+                        // Upvote
                         Row(
                           children: [
                             IconButton(
@@ -605,7 +664,11 @@ class _EventDetailPageState extends State<EventDetailPage> {
                               ),
                               onPressed: () => toggleArrayField('upvotes'),
                             ),
-                            Text(formatNumber(event['upvotes'].length)),
+                            Builder(builder: (context) {
+                              final int upvotesCount = event['upvotes'].length;
+                              final String label = upvotesCount == 1 ? 'Upvote' : 'Upvotes';
+                              return Text('${formatNumber(upvotesCount)} $label');
+                            }),
                           ],
                         ),
                       ],
