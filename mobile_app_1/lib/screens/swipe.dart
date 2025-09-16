@@ -202,24 +202,24 @@ class _CardSwipeState extends State<CardSwipe> {
                                       Center(
                                         child: (profileImage != null && profileImage.isNotEmpty)
                                             ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(20),
-                                                child: Image.network(
-                                                  profileImage,
-                                                  height: 300,
-                                                  width: 300,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => const Icon(
-                                                    Icons.person,
-                                                    size: 300,
-                                                    color: Color(0xFFD0F3FF),
-                                                  ),
-                                                ),
-                                              )
+                                          borderRadius: BorderRadius.circular(20),
+                                          child: Image.network(
+                                            profileImage,
+                                            height: 300,
+                                            width: 300,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => const Icon(
+                                              Icons.person,
+                                              size: 300,
+                                              color: Color(0xFFD0F3FF),
+                                            ),
+                                          ),
+                                        )
                                             : const Icon(
-                                                Icons.person,
-                                                size: 300,
-                                                color: Color(0xFFD0F3FF),
-                                              ),
+                                          Icons.person,
+                                          size: 300,
+                                          color: Color(0xFFD0F3FF),
+                                        ),
                                       ),
                                       const SizedBox(height: 2),
                                       Row(
@@ -335,32 +335,31 @@ class _CardSwipeState extends State<CardSwipe> {
                       ),
                     ),
                   ),
-                  // like/dislike over the cards
                   Align(
-                    alignment: Alignment.bottomCenter,
+                    alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () => _cardController.swipe(CardSwiperDirection.left),
-                            child: Container(
-                              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black),
-                              padding: const EdgeInsets.all(20),
-                              child: const Icon(Icons.close, color: Colors.white, size: 30),
-                            ),
-                          ),
-                          const SizedBox(width: 40),
-                          GestureDetector(
-                            onTap: () => _cardController.swipe(CardSwiperDirection.right),
-                            child: Container(
-                              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.red),
-                              padding: const EdgeInsets.all(20),
-                              child: const Icon(Icons.favorite, color: Colors.white, size: 30),
-                            ),
-                          ),
-                        ],
+                      padding: const EdgeInsets.only(left: 16),
+                      child: GestureDetector(
+                        onTap: () => _cardController.swipe(CardSwiperDirection.left),
+                        child: Container(
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black),
+                          padding: const EdgeInsets.all(20),
+                          child: const Icon(Icons.close, color: Colors.white, size: 30),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: GestureDetector(
+                        onTap: () => _cardController.swipe(CardSwiperDirection.right),
+                        child: Container(
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.red),
+                          padding: const EdgeInsets.all(20),
+                          child: const Icon(Icons.favorite, color: Colors.white, size: 30),
+                        ),
                       ),
                     ),
                   ),
@@ -399,4 +398,5 @@ class _CardSwipeState extends State<CardSwipe> {
       ),
     );
   }
+
 }
