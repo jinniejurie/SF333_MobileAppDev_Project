@@ -25,16 +25,36 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: pages[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.explore_outlined), label: 'Discover'),
-          NavigationDestination(icon: Icon(Icons.group_outlined), label: 'Friends'),
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-          NavigationDestination(icon: Icon(Icons.inbox_outlined), label: 'Requests'),
-        ],
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            height: 64,
+            backgroundColor: Colors.transparent,
+            indicatorColor: Colors.transparent,
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.home_outlined), label: ''),
+              NavigationDestination(icon: Icon(Icons.add_circle_outline), label: ''),
+              NavigationDestination(icon: Icon(Icons.group_outlined), label: ''),
+              NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: ''),
+            ],
+          ),
+        ),
       ),
     );
   }
