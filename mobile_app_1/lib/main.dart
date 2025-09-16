@@ -1,21 +1,21 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-import 'screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
+import 'package:my_app/screens/swipe.dart'; // <-- your CardSwipe page
+import 'package:my_app/screens/community_home.dart';
+import 'package:my_app/screens/create_post_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // Ensure there is a signed-in user (for demo, use anonymous auth)
-  final auth = FirebaseAuth.instance;
-  if (auth.currentUser == null) {
-    try {
-      await auth.signInAnonymously();
-    } catch (_) {}
-  }
+  try {
+    // Ensure there is a user for Firestore security rules
+    await FirebaseAuth.instance.signInAnonymously();
+  } catch (_) {}
   runApp(const MyApp());
 }
 
@@ -31,7 +31,12 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      routes: {
+        '/': (context) => const CommunityHome(),
+        '/swipe': (context) => const CardSwipe(),
+        '/createPost': (context) => const CreatePostPage(),
+      },
+      initialRoute: '/',
     );
   }
 }
