@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'swipe.dart';
 import 'dart:convert';
 
 class PostItem {
   final String postId;
-  final String authorId;
+  final String uid;
   final String authorName;
   final String avatarUrl;
   final String content;
@@ -14,10 +15,11 @@ class PostItem {
   final String? title;
   final String? communityId;
   final List<String> mediaUrls;
+  final List<String> tags;
 
   PostItem({
     required this.postId,
-    required this.authorId,
+    required this.uid,
     required this.authorName,
     required this.avatarUrl,
     required this.content,
@@ -27,6 +29,7 @@ class PostItem {
     this.title,
     this.communityId,
     this.mediaUrls = const [],
+    this.tags = const [],
   });
 
   static PostItem fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -53,7 +56,7 @@ class PostItem {
 
     return PostItem(
       postId: data['postId']?.toString() ?? doc.id,
-      authorId: data['authorId']?.toString() ?? '',
+      uid: data['uid']?.toString() ?? data['authorId']?.toString() ?? '',
       authorName: data['authorName']?.toString() ?? 'Unknown',
       avatarUrl: data['avatarUrl']?.toString() ?? 'https://i.pravatar.cc/150?img=1',
       content: data['content']?.toString() ?? '',
@@ -64,6 +67,9 @@ class PostItem {
       communityId: data['communityId']?.toString(),
       mediaUrls: (data['mediaUrls'] is List)
           ? (data['mediaUrls'] as List).map((e) => e.toString()).toList()
+          : const <String>[],
+      tags: (data['tags'] is List)
+          ? (data['tags'] as List).map((e) => e.toString()).toList()
           : const <String>[],
     );
   }
@@ -78,9 +84,228 @@ class CommunityHome extends StatefulWidget {
 
 class _CommunityHomeState extends State<CommunityHome> {
   int _currentIndex = 0;
+  final Set<String> _likedPostIds = <String>{};
 
   Future<void> _openComposer() async {
     await Navigator.of(context).pushNamed('/createPost');
+  }
+
+  Future<void> _toggleLike(PostItem post) async {
+    final doc = FirebaseFirestore.instance.collection('posts').doc(post.postId);
+    final already = _likedPostIds.contains(post.postId);
+    setState(() {
+      if (already) {
+        _likedPostIds.remove(post.postId);
+      } else {
+        _likedPostIds.add(post.postId);
+      }
+    });
+    try {
+      // In a real app, replace with the authenticated user's uid
+      const String currentUid = 'demo-user-001';
+      await doc.update({
+        'likesCount': FieldValue.increment(already ? -1 : 1),
+        'likes': already
+            ? FieldValue.arrayRemove([currentUid])
+            : FieldValue.arrayUnion([currentUid]),
+      });
+    } catch (_) {/* ignore */}
+  }
+
+  Future<void> _openComments(PostItem post) async {
+    final TextEditingController controller = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            final commentsRef = FirebaseFirestore.instance
+                .collection('posts')
+                .doc(post.postId)
+                .collection('comments')
+                .orderBy('createdAt', descending: true);
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(height: 12),
+                  const Text('Comments', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: commentsRef.snapshots(),
+                      builder: (context, snap) {
+                        if (snap.hasError) {
+                          return const Center(child: Text('Cannot load comments (permission/rules).'));
+                        }
+                        if (!snap.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final items = snap.data!.docs;
+                        if (items.isEmpty) {
+                          return const Center(child: Text('Be the first to comment'));
+                        }
+                        return ListView.builder(
+                          controller: scrollController,
+                          itemCount: items.length,
+                          itemBuilder: (context, i) {
+                            final c = items[i].data();
+                            return ListTile(
+                              leading: const CircleAvatar(radius: 14, child: Icon(Icons.person, size: 14)),
+                              title: Text(c['authorName']?.toString() ?? 'User', style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: Text(c['text']?.toString() ?? ''),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+                            decoration: const InputDecoration(
+                              hintText: 'Write a comment...',
+                              filled: true,
+                              fillColor: Color(0xFFF5F6FF),
+                              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: () async {
+                            final text = controller.text.trim();
+                            if (text.isEmpty) return;
+                            controller.clear();
+                            final comments = FirebaseFirestore.instance
+                                .collection('posts')
+                                .doc(post.postId)
+                                .collection('comments');
+                            await comments.add({
+                              'text': text,
+                              'authorName': 'Anonymous',
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                            await FirebaseFirestore.instance
+                                .collection('posts')
+                                .doc(post.postId)
+                                .update({'commentsCount': FieldValue.increment(1)});
+                          },
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openTagSearch() async {
+    final controller = TextEditingController();
+    List<String> suggestions = [];
+    try {
+      final s = await FirebaseFirestore.instance.collection('tags').limit(20).get();
+      suggestions = s.docs.map((d) => d.id).toList();
+    } catch (_) {
+      // fallback: sample from recent posts
+      final s = await FirebaseFirestore.instance.collection('posts').limit(50).get();
+      final set = <String>{};
+      for (final d in s.docs) {
+        final data = d.data();
+        if (data['tags'] is List) {
+          for (final t in (data['tags'] as List)) {
+            if (t is String && t.isNotEmpty) set.add(t);
+          }
+        }
+      }
+      suggestions = set.take(20).toList();
+    }
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        String query = '';
+        List<String> filtered = suggestions;
+        return StatefulBuilder(builder: (context, setSt) {
+          void onChanged(String v) {
+            query = v.trim();
+            setSt(() {
+              filtered = suggestions
+                  .where((e) => e.toLowerCase().contains(query.toLowerCase()))
+                  .toList();
+            });
+          }
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 12),
+                const Text('Search tags', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    controller: controller,
+                    onChanged: onChanged,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Type a tag...',
+                      filled: true,
+                      fillColor: Color(0xFFF5F6FF),
+                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: filtered
+                        .map((t) => ListTile(
+                              leading: const Icon(Icons.tag),
+                              title: Text('#$t'),
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => TagFeedPage(tag: t)),
+                                );
+                              },
+                            ))
+                        .toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        });
+      },
+    );
   }
 
   @override
@@ -104,29 +329,39 @@ class _CommunityHomeState extends State<CommunityHome> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Top cloud/logo and actions row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          Image.asset('assets/cloud_logo.png', width: 42, height: 34),
                           Row(children: const [
-                            Text('Explore',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                )),
-                            SizedBox(width: 8),
-                            Icon(Icons.search, size: 22),
-                          ]),
-                          Row(children: const [
-                            Icon(Icons.emoji_emotions_outlined),
+                            CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
                             SizedBox(width: 12),
                             Icon(Icons.notifications_none),
                           ]),
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Text('Explore',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                            )),
+                        SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _openTagSearch,
+                          child: const Icon(Icons.search, size: 22),
+                        ),
+                      ]),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          _pillButton('Make Friends'),
+                          GestureDetector(onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const CardSwipe()),
+                            );
+                          }, child: _pillButton('Make Friends')),
                           const SizedBox(width: 12),
                           _pillButton('Join Community'),
                         ],
@@ -176,9 +411,15 @@ class _CommunityHomeState extends State<CommunityHome> {
                       itemCount: posts.length,
                       itemBuilder: (context, index) {
                         final post = posts[index];
+                        final isLiked = _likedPostIds.contains(post.postId);
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          child: _PostCard(post: post),
+                          child: _PostCard(
+                            post: post,
+                            onLike: _toggleLike,
+                            onComment: _openComments,
+                            isLiked: isLiked,
+                          ),
                         );
                       },
                     );
@@ -192,7 +433,14 @@ class _CommunityHomeState extends State<CommunityHome> {
       ),
       bottomNavigationBar: _BottomBar(
         currentIndex: _currentIndex,
-        onChanged: (i) => setState(() => _currentIndex = i),
+        onChanged: (i) {
+          setState(() => _currentIndex = i);
+          if (i == 3) {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CardSwipe()),
+            );
+          }
+        },
         onPlus: _openComposer,
       ),
     );
@@ -216,7 +464,10 @@ class _CommunityHomeState extends State<CommunityHome> {
 
 class _PostCard extends StatelessWidget {
   final PostItem post;
-  const _PostCard({required this.post});
+  final void Function(PostItem) onLike;
+  final void Function(PostItem) onComment;
+  final bool isLiked;
+  const _PostCard({required this.post, required this.onLike, required this.onComment, this.isLiked = false});
 
   String _timeAgo() {
     final diff = DateTime.now().difference(post.createdAt);
@@ -271,15 +522,54 @@ class _PostCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.favorite_border, size: 18),
-                const SizedBox(width: 6),
-                Text('${post.likes}'),
-                const SizedBox(width: 16),
-                const Icon(Icons.chat_bubble_outline, size: 18),
-                const SizedBox(width: 6),
-                Text('${post.comments}'),
+                InkWell(
+                  onTap: () => onLike(post),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(children: [
+                      Icon(isLiked ? Icons.favorite : Icons.favorite_border, size: 18, color: isLiked ? Colors.black : null),
+                      const SizedBox(width: 6),
+                      Text('${post.likes}'),
+                    ]),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => onComment(post),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(children: [
+                      const Icon(Icons.chat_bubble_outline, size: 18),
+                      const SizedBox(width: 6),
+                      Text('${post.comments}'),
+                    ]),
+                  ),
+                ),
               ],
-            )
+            ),
+            if (post.tags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: post.tags
+                    .map((t) => GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => TagFeedPage(tag: t)),
+                            );
+                          },
+                          child: Chip(
+                            label: Text('#$t'),
+                            backgroundColor: const Color(0xFFF5F6FF),
+                            shape: const StadiumBorder(side: BorderSide(color: Colors.black26)),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ]
           ],
         ),
       ),
@@ -323,6 +613,47 @@ class _PostCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class TagFeedPage extends StatelessWidget {
+  final String tag;
+  const TagFeedPage({super.key, required this.tag});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('#$tag'), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('posts')
+            .where('tags', arrayContains: tag)
+            // Remove orderBy to avoid composite index requirement
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return const Center(child: Text('No posts for this tag yet'));
+          }
+          final posts = docs.map((d) => PostItem.fromDoc(d)).toList();
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: posts.length,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: _PostCard(
+                post: posts[index],
+                onLike: (_) {},
+                onComment: (_) {},
+              ),
+            ),
+          );
+        },
       ),
     );
   }

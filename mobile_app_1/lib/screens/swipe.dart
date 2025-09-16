@@ -20,16 +20,13 @@ class _CardSwipeState extends State<CardSwipe> {
 
   Future<List<String>> _getInterests(List<dynamic>? references) async {
     if (references == null || references.isEmpty) return [];
-    List<String> interestNames = [];
-    for (var ref in references) {
+    final List<String> interestNames = [];
+    for (final ref in references) {
       if (ref is DocumentReference) {
-        final doc = await ref.get();
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>?;
-          if (data != null && data['name'] != null) {
-            interestNames.add(data['name']);
-          }
-        }
+        // Use the reference id directly to avoid extra reads and permission issues
+        if (ref.id.isNotEmpty) interestNames.add(ref.id);
+      } else if (ref is String && ref.isNotEmpty) {
+        interestNames.add(ref.split('/').isNotEmpty ? ref.split('/').last : ref);
       }
     }
     return interestNames;
@@ -37,16 +34,12 @@ class _CardSwipeState extends State<CardSwipe> {
 
   Future<List<String>> _getDisability(List<dynamic>? references) async {
     if (references == null || references.isEmpty) return [];
-    List<String> disabilityNames = [];
-    for (var ref in references) {
+    final List<String> disabilityNames = [];
+    for (final ref in references) {
       if (ref is DocumentReference) {
-        final doc = await ref.get();
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>?;
-          if (data != null && data['name'] != null) {
-            disabilityNames.add(data['name']);
-          }
-        }
+        if (ref.id.isNotEmpty) disabilityNames.add(ref.id);
+      } else if (ref is String && ref.isNotEmpty) {
+        disabilityNames.add(ref.split('/').isNotEmpty ? ref.split('/').last : ref);
       }
     }
     return disabilityNames;
@@ -80,6 +73,7 @@ class _CardSwipeState extends State<CardSwipe> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -206,22 +200,26 @@ class _CardSwipeState extends State<CardSwipe> {
                                     CrossAxisAlignment.start,
                                     children: [
                                       Center(
-                                        child: profileImage != null &&
-                                            profileImage.isNotEmpty
+                                        child: (profileImage != null && profileImage.isNotEmpty)
                                             ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(20),
-                                          child: Image.network(
-                                            profileImage,
-                                            height: 300,
-                                            width: 300,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error,
-                                                stackTrace) =>
-                                            const Icon(Icons.person,
-                                                size: 300, color: Color(0xFFD0F3FF)),
-                                          ),
-                                        )
-                                            : const Icon(Icons.person, size: 300, color: Color(0xFFD0F3FF)),
+                                                borderRadius: BorderRadius.circular(20),
+                                                child: Image.network(
+                                                  profileImage,
+                                                  height: 300,
+                                                  width: 300,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) => const Icon(
+                                                    Icons.person,
+                                                    size: 300,
+                                                    color: Color(0xFFD0F3FF),
+                                                  ),
+                                                ),
+                                              )
+                                            : const Icon(
+                                                Icons.person,
+                                                size: 300,
+                                                color: Color(0xFFD0F3FF),
+                                              ),
                                       ),
                                       const SizedBox(height: 2),
                                       Row(
@@ -369,6 +367,33 @@ class _CardSwipeState extends State<CardSwipe> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 20)],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.home_rounded, color: Colors.black54),
+            ),
+            const Icon(Icons.explore_outlined, color: Colors.black54),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF4C1D95)),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+            const Icon(Icons.group_outlined, color: Color(0xFF4C1D95)),
+            const Icon(Icons.person_outline, color: Colors.black54),
           ],
         ),
       ),
