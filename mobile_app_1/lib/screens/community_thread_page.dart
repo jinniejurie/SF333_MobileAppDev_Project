@@ -266,6 +266,154 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
     }
   }
 
+  Future<void> _createEvent() async {
+    await _ensureSignedIn();
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    final locationCtrl = TextEditingController();
+    final dateCtrl = TextEditingController();
+    final timeCtrl = TextEditingController();
+    
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: const [
+                  Icon(Icons.event),
+                  SizedBox(width: 8),
+                  Text('Create Event', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18))
+                ]),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Event title',
+                    filled: true,
+                    fillColor: Color(0xFFF5F6FF),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    filled: true,
+                    fillColor: Color(0xFFF5F6FF),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: locationCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    filled: true,
+                    fillColor: Color(0xFFF5F6FF),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: dateCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Date (DD-MM-YYYY)',
+                          filled: true,
+                          fillColor: Color(0xFFF5F6FF),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: timeCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Time (HH:MM)',
+                          filled: true,
+                          fillColor: Color(0xFFF5F6FF),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (titleCtrl.text.trim().isEmpty || 
+                          descCtrl.text.trim().isEmpty ||
+                          locationCtrl.text.trim().isEmpty ||
+                          dateCtrl.text.trim().isEmpty ||
+                          timeCtrl.text.trim().isEmpty) return;
+                      Navigator.of(context).pop(true);
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create Event'),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (created != true) return;
+
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'demo-user-001';
+    final authorName = FirebaseAuth.instance.currentUser?.displayName ?? 'Anonymous';
+    try {
+      await FirebaseFirestore.instance
+          .collection('communities')
+          .doc(widget.communityId)
+          .collection('events')
+          .add({
+        'title': titleCtrl.text.trim(),
+        'description': descCtrl.text.trim(),
+        'location': locationCtrl.text.trim(),
+        'date': dateCtrl.text.trim(),
+        'time': timeCtrl.text.trim(),
+        'authorUid': uid,
+        'authorName': authorName,
+        'createdAt': FieldValue.serverTimestamp(),
+        'registered': [],
+        'upvotes': [],
+        'communityId': widget.communityId,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event created successfully!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create event: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -432,19 +580,163 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                           );
                         },
                       )
-                    : const Center(child: Text('Events coming soon')),
+                    : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: FirebaseFirestore.instance
+                            .collection('communities')
+                            .doc(widget.communityId)
+                            .collection('events')
+                            .orderBy('createdAt', descending: true)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          final docs = snapshot.data?.docs ?? [];
+                          if (docs.isEmpty) {
+                            return const Center(child: Text('No events yet'));
+                          }
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            itemCount: docs.length,
+                            itemBuilder: (context, index) {
+                              final event = docs[index].data();
+                              final colors = <Color>[
+                                const Color.fromARGB(255, 172, 199, 219),
+                                const Color.fromARGB(255, 145, 203, 145),
+                                const Color.fromARGB(255, 170, 111, 184),
+                                const Color(0xFFFFE4B5),
+                                const Color.fromARGB(255, 228, 145, 97),
+                              ];
+                              
+                              String getDaysLeft(dynamic dateValue) {
+                                try {
+                                  DateTime eventDate;
+                                  if (dateValue is String) {
+                                    final parts = dateValue.split('-');
+                                    eventDate = DateTime(
+                                      int.parse(parts[2]),
+                                      int.parse(parts[1]),
+                                      int.parse(parts[0]),
+                                    );
+                                  } else if (dateValue is Timestamp) {
+                                    eventDate = dateValue.toDate();
+                                  } else {
+                                    return 'Date error';
+                                  }
+                                  final daysLeft = eventDate.difference(DateTime.now()).inDays;
+                                  if (daysLeft < 0) return 'Past event';
+                                  if (daysLeft == 0) return 'Today';
+                                  if (daysLeft == 1) return '1 day left';
+                                  return '$daysLeft days left';
+                                } catch (_) {
+                                  return 'Date error';
+                                }
+                              }
+
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => EventDetailPage(
+                                        eventId: docs[index].id,
+                                        currentUserId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                                        communityId: widget.communityId,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: colors[index % colors.length],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    padding: const EdgeInsets.all(20),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          event['title'] ?? 'N/A',
+                                          style: const TextStyle(fontSize: 22, color: Colors.black),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              event['date'] is Timestamp
+                                                  ? (event['date'] as Timestamp)
+                                                      .toDate()
+                                                      .toString()
+                                                      .split(' ')[0]
+                                                  : (event['date'] ?? 'N/A'),
+                                              style: const TextStyle(fontSize: 16, color: Colors.black),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                getDaysLeft(event['date']),
+                                                style: const TextStyle(fontSize: 12, color: Colors.white),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          event['location'] ?? 'N/A',
+                                          style: const TextStyle(fontSize: 16, color: Colors.black),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.face_2, size: 18, color: Colors.black),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  ' ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length == 1 ? '' : 's'}',
+                                                  style: const TextStyle(fontSize: 16, color: Colors.black),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(width: 20),
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.whatshot, size: 18, color: Colors.black),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${(event['upvotes'] ?? []).length}',
+                                                  style: const TextStyle(fontSize: 16, color: Colors.black),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: _tab == 0
-          ? FloatingActionButton(
-              onPressed: _createThread,
-              backgroundColor: const Color(0xFF4C1D95),
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _tab == 0 ? _createThread : _createEvent,
+        backgroundColor: const Color(0xFF4C1D95),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 1,
         onChanged: (i) {
