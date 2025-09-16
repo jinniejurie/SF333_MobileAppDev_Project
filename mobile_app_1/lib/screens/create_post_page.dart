@@ -75,7 +75,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     final newDoc = posts.doc();
     final base = {
       'postId': newDoc.id,
-      'authorId': 'demo-user-001',
+      'uid': 'demo-user-001',
       'authorName': 'Jane Doe',
       'avatarUrl': 'https://i.pravatar.cc/150?img=5',
       'title': _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
@@ -92,8 +92,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
       final data = {...base, 'mediaUrls': base64Images};
       await newDoc.set(data);
       if (!mounted) return;
-      setState(() => _isPosting = false);
-      Navigator.of(context).pop();
+      // Navigate back to feed immediately on success
+      Navigator.of(context).pop(true);
+      return;
     } catch (e) {
       if (!mounted) return;
       setState(() => _isPosting = false);
@@ -123,6 +124,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new),
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    ),
                     Image.asset('assets/cloud_logo.png', width: 40, height: 32),
                     const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
                   ],
