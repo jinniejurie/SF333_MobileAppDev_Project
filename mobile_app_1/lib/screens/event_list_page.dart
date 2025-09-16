@@ -79,11 +79,38 @@ class _EventListPageState extends State<EventListPage> {
               if (docs.isEmpty) {
                 return const Center(child: Text('No events found.'));
               }
+              
+              // Filter out past events and sort by upvotes
+              final now = DateTime.now();
+              final filteredDocs = docs.where((doc) {
+                final data = doc.data();
+                final eventDate = data['date'];
+                if (eventDate != null) {
+                  DateTime eventDateTime;
+                  if (eventDate is Timestamp) {
+                    eventDateTime = eventDate.toDate();
+                  } else if (eventDate is String) {
+                    eventDateTime = DateTime.parse(eventDate);
+                  } else {
+                    return false;
+                  }
+                  return !eventDateTime.isBefore(now);
+                }
+                return true;
+              }).toList();
+              
+              // Sort by upvote count (highest first)
+              filteredDocs.sort((a, b) {
+                final aUpvotes = (a.data()['upvotes'] as List?)?.length ?? 0;
+                final bUpvotes = (b.data()['upvotes'] as List?)?.length ?? 0;
+                return bUpvotes.compareTo(aUpvotes);
+              });
+              
               return ListView.builder(
                 padding: const EdgeInsets.only(top: 20),
-                itemCount: docs.length,
+                itemCount: filteredDocs.length,
                 itemBuilder: (context, index) {
-                  final event = docs[index].data() as Map<String, dynamic>;
+                  final event = filteredDocs[index].data() as Map<String, dynamic>;
                   // สีพื้นหลังสำหรับแต่ละ event
                   List<Color> eventColors = [
                     const Color.fromARGB(255, 172, 199, 219),
@@ -193,7 +220,7 @@ class _EventListPageState extends State<EventListPage> {
                                     const Icon(Icons.face_2, size: 18, color: Colors.black),
                                     const SizedBox(width: 4),
                                     Text(
-                                      " ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length == 1 ? '' : 's'}",
+                                      " ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length <= 1 ? '' : 's'}",
                                       style: const TextStyle(
                                         fontSize: 16,
                                         color: Colors.black,

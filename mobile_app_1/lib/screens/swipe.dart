@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import '../widgets/app_bottom_navbar.dart';
 
 class CardSwipe extends StatefulWidget {
   const CardSwipe({super.key});
@@ -369,60 +370,32 @@ class _CardSwipeState extends State<CardSwipe> {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 20)],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.home_rounded, color: Colors.black54),
-            ),
-            IconButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushNamed('/communityDiscover');
-              },
-              icon: const Icon(Icons.explore_outlined, color: Colors.black54),
-            ),
-            Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF4C1D95)),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
-            const Icon(Icons.group_outlined, color: Color(0xFF4C1D95)),
-            Stack(
-              children: [
-                const Icon(Icons.chat_bubble_outline, color: Colors.black54),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blue,
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 8,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 2,
+        onChanged: (index) {
+          switch (index) {
+            case 0:
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              break;
+            case 1:
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/communityDiscover');
+              break;
+            case 2:
+              // Already on swipe page
+              break;
+            case 3:
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/communityThread');
+              break;
+            case 4:
+              // Chat functionality
+              break;
+          }
+        },
+        onPlus: () {
+          Navigator.of(context).pushNamed('/createPost');
+        },
       ),
     );
   }

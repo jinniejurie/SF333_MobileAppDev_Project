@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 
 class EventDetailPage extends StatefulWidget {
   final String eventId;
@@ -474,8 +475,36 @@ class _EventDetailPageState extends State<EventDetailPage> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: (() {
+                        // ตรวจสอบ mediaUrls ก่อน (base64 images)
+                        final List<dynamic> mediaUrls = event['mediaUrls'] ?? [];
+                        if (mediaUrls.isNotEmpty) {
+                          return Image.memory(
+                            base64Decode(mediaUrls.first),
+                            width: double.infinity,
+                            height: 250,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: double.infinity,
+                                height: 250,
+                                color: Colors.grey[300],
+                                alignment: Alignment.center,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.error, color: Colors.grey[700]),
+                                    SizedBox(height: 8),
+                                    Text('Failed to load image', style: TextStyle(color: Colors.grey[700])),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        }
+                        
+                        // ถ้าไม่มี mediaUrls ให้ตรวจสอบ imageUrl
                         final String imageUrl = (event['imageUrl'] ?? '').toString().trim();
-                        if (imageUrl.isEmpty) {
+                        if (imageUrl.isEmpty || !imageUrl.startsWith('http')) {
                           return Container(
                             width: double.infinity,
                             height: 250,
@@ -486,7 +515,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                               children: [
                                 Icon(Icons.image, color: Colors.grey[700]),
                                 SizedBox(height: 8),
-                                Text('No imageUrl', style: TextStyle(color: Colors.grey[700])),
+                                Text('No image', style: TextStyle(color: Colors.grey[700])),
                               ],
                             ),
                           );
@@ -670,7 +699,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                             ),
                             Builder(builder: (context) {
                               final int likesCount = event['likes'].length;
-                              final String label = likesCount == 1 ? 'Like' : 'Likes';
+                              final String label = likesCount <= 1 ? 'Like' : 'Likes';
                               return Text('${formatNumber(likesCount)} $label');
                             }),
                           ],
@@ -702,7 +731,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                             ),
                             Builder(builder: (context) {
                               final int upvotesCount = event['upvotes'].length;
-                              final String label = upvotesCount == 1 ? 'Upvote' : 'Upvotes';
+                              final String label = upvotesCount <= 1 ? 'Upvote' : 'Upvotes';
                               return Text('${formatNumber(upvotesCount)} $label');
                             }),
                           ],

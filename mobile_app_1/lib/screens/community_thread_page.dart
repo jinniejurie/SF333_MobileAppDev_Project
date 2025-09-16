@@ -501,7 +501,6 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                             .collection('communities')
                             .doc(widget.communityId)
                             .collection('events')
-                            .orderBy('createdAt', descending: true)
                             .snapshots(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -512,20 +511,50 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                             return const Center(child: Text('No events yet'));
                           }
                           
-                          // Filter events based on search query
-                          final filteredEventDocs = _searchQuery.isEmpty 
-                              ? docs 
-                              : docs.where((doc) {
-                                  final data = doc.data();
-                                  final title = (data['title'] ?? '').toString().toLowerCase();
-                                  final description = (data['description'] ?? '').toString().toLowerCase();
-                                  final location = (data['location'] ?? '').toString().toLowerCase();
-                                  final organizer = (data['organizer'] ?? '').toString().toLowerCase();
-                                  return title.contains(_searchQuery) || 
-                                         description.contains(_searchQuery) || 
-                                         location.contains(_searchQuery) ||
-                                         organizer.contains(_searchQuery);
-                                }).toList();
+                          // Filter out past events and apply search query
+                          final now = DateTime.now();
+                          final filteredEventDocs = docs.where((doc) {
+                            final data = doc.data();
+                            
+                            // Check if event is in the past
+                            final eventDate = data['date'];
+                            if (eventDate != null) {
+                              DateTime eventDateTime;
+                              if (eventDate is Timestamp) {
+                                eventDateTime = eventDate.toDate();
+                              } else if (eventDate is String) {
+                                eventDateTime = DateTime.parse(eventDate);
+                              } else {
+                                return false; // Skip if date format is unknown
+                              }
+                              
+                              // Skip past events
+                              if (eventDateTime.isBefore(now)) {
+                                return false;
+                              }
+                            }
+                            
+                            // Apply search filter
+                            if (_searchQuery.isNotEmpty) {
+                              final title = (data['title'] ?? '').toString().toLowerCase();
+                              final description = (data['description'] ?? '').toString().toLowerCase();
+                              final location = (data['location'] ?? '').toString().toLowerCase();
+                              final organizer = (data['organizer'] ?? '').toString().toLowerCase();
+                              return title.contains(_searchQuery) || 
+                                     description.contains(_searchQuery) || 
+                                     location.contains(_searchQuery) ||
+                                     organizer.contains(_searchQuery);
+                            }
+                            
+                            return true;
+                          }).toList();
+                          
+                          // Sort by upvote count (highest first)
+                          filteredEventDocs.sort((a, b) {
+                            final aUpvotes = (a.data()['upvotes'] as List?)?.length ?? 0;
+                            final bUpvotes = (b.data()['upvotes'] as List?)?.length ?? 0;
+                            return bUpvotes.compareTo(aUpvotes);
+                          });
                           
                           if (filteredEventDocs.isEmpty && _searchQuery.isNotEmpty) {
                             return const Center(
@@ -638,7 +667,7 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                                                 const Icon(Icons.face_2, size: 18, color: Colors.black),
                                                 const SizedBox(width: 4),
                                                 Text(
-                                                  ' ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length == 1 ? '' : 's'}',
+                                                  ' ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length <= 1 ? '' : 's'}',
                                                   style: const TextStyle(fontSize: 16, color: Colors.black),
                                                 ),
                                               ],
@@ -669,11 +698,6 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _tab == 0 ? _createThread : _createEvent,
-        backgroundColor: const Color(0xFF4C1D95),
-        child: const Icon(Icons.add, color: Colors.white),
       ),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: 1,

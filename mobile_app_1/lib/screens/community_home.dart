@@ -1118,7 +1118,8 @@ class EventListEmbedded extends StatelessWidget {
           return db.compareTo(da);
         });
 
-        final ordered = <Map<String, dynamic>>[...upcoming, ...past];
+        // Only show upcoming events (sorted by upvotes)
+        final ordered = <Map<String, dynamic>>[...upcoming];
 
         return ListView.builder(
           padding: const EdgeInsets.only(top: 0),
@@ -1225,7 +1226,7 @@ class EventListEmbedded extends StatelessWidget {
                               const Icon(Icons.face_2, size: 18, color: Colors.black),
                               const SizedBox(width: 4),
                               Text(
-                                ' ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length == 1 ? '' : 's'}',
+                                ' ${(event['registered'] ?? []).length} Participant${(event['registered'] ?? []).length <= 1 ? '' : 's'}',
                                 style: const TextStyle(fontSize: 16, color: Colors.black),
                               ),
                             ],
