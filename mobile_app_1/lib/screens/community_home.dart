@@ -357,10 +357,15 @@ class _CommunityHomeState extends State<CommunityHome> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Image.asset('assets/cloud_logo.png', width: 42, height: 34),
-                          Row(children: const [
-                            CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
-                            SizedBox(width: 12),
-                            Icon(Icons.notifications_none),
+                          Row(children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/profileSettings');
+                              },
+                              child: const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
+                            ),
+                            const SizedBox(width: 12),
+                            const Icon(Icons.notifications_none),
                           ]),
                         ],
                       ),
