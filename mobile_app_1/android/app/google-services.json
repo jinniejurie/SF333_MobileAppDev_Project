@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1048662921037",
+    "project_id": "sf333-mobileappdev-project",
+    "storage_bucket": "sf333-mobileappdev-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1048662921037:android:0bd41579975b002fecf104",
+        "android_client_info": {
+          "package_name": "com.oncloud.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6_bLnYgcLvPOJ2j0BmCorVSZ1ShWWahA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
