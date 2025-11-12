@@ -7,7 +7,6 @@ import 'community_home.dart';
 import 'disability_page.dart';
 import 'interests_page.dart';
 import 'final_profile_page.dart';
-import '../widgets/base_page.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -30,7 +29,8 @@ class _WelcomePageState extends State<WelcomePage> {
   Future<void> _checkUserStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     
-    if (user != null) {
+    // ถ้าเป็น anonymous user ให้ถือว่าไม่ได้ login (แสดงหน้า welcome)
+    if (user != null && !user.isAnonymous) {
       setState(() => _isLoggedIn = true);
       
       // ตรวจสอบว่าผู้ใช้ได้กรอกข้อมูลโปรไฟล์ครบถ้วนหรือไม่
@@ -67,8 +67,24 @@ class _WelcomePageState extends State<WelcomePage> {
     }
 
     // ถ้าผู้ใช้ login แล้วและมีโปรไฟล์ครบถ้วน ให้ไปหน้า CommunityHome
+    // แต่ไม่ redirect ถ้ามี route ก่อนหน้า (เช่น กลับมาจาก community_home)
     if (_isLoggedIn && _hasCompletedProfile) {
-      return const CommunityHome();
+      // ตรวจสอบว่ามี route ก่อนหน้าหรือไม่ ถ้ามีแสดงว่าไม่ใช่การเปิดแอปครั้งแรก
+      if (Navigator.canPop(context)) {
+        // ถ้ามี route ก่อนหน้า แสดง welcome screen ปกติ (ไม่ redirect)
+        return _buildWelcomeScreen();
+      }
+      // ถ้าไม่มี route ก่อนหน้า แสดงว่าเป็นการเปิดแอปครั้งแรก ให้ redirect
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const CommunityHome()),
+          );
+        }
+      });
+      // Return welcome screen ชั่วคราวระหว่างรอ navigation
+      return _buildWelcomeScreen();
     }
 
     // ถ้าผู้ใช้ login แล้วแต่ยังไม่มีโปรไฟล์ครบถ้วน ให้ไปหน้า Profile Setup
@@ -81,8 +97,8 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 
   Widget _buildWelcomeScreen() {
-    return BasePage(
-      child: Container(
+    return Scaffold(
+      body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],

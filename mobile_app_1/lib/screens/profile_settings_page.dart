@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'signup_page.dart';
 import 'disability_page.dart';
 import 'interests_page.dart';
 import 'final_profile_page.dart';
@@ -16,11 +15,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final PageController _pageController = PageController();
 
   final List<Map<String, dynamic>> _settingsPages = [
-    {
-      'title': 'Personal Information',
-      'icon': Icons.person,
-      'page': const SignUpPage(),
-    },
     {
       'title': 'Disability Information',
       'icon': Icons.accessibility,

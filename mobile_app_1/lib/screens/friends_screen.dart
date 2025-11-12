@@ -207,7 +207,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
         onChanged: (index) {
           switch (index) {
             case 0:
-              Navigator.of(context).popUntil((route) => route.isFirst);
+              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
               break;
             case 1:
               Navigator.of(context).pushNamed('/communityDiscover');
