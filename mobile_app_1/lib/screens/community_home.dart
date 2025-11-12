@@ -1030,7 +1030,7 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
         onChanged: (i) {
           switch (i) {
             case 0:
-              Navigator.of(context).popUntil((route) => route.isFirst);
+              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
               break;
             case 1:
               // Already on community discover page

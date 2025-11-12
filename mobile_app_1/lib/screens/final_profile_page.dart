@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:geocoding/geocoding.dart'; // <--- Used for reverse geocoding
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'interests_page.dart';
+import 'disability_page.dart';
 
 class FinalProfilePage extends StatefulWidget {
   const FinalProfilePage({super.key});
@@ -18,6 +20,10 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
   bool _loading = true;
   Map<String, dynamic>? _userData;
   late TextEditingController _bioController;
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _passwordController;
+  late TextEditingController _confirmPasswordController;
   // This will now strictly hold the City, Country string fetched from Firestore
   String _location = 'Location not set';
   String _customUserId = ''; // To store the ONXXXXX ID
@@ -25,6 +31,7 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
 
   // Added this to store the parsed birthDate object
   DateTime? _birthDate;
+  String? _gender;
 
   @override
   void initState() {
@@ -79,7 +86,19 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
       _userData = userDoc.data();
 
       // FIX 1: Fetch the Custom User ID from the 'uid' field, as set in signup_page.dart
-      _customUserId = _userData?['uid'] ?? 'N/A';
+      // Support both 'uid' and 'custom_user_id' for backward compatibility
+      _customUserId = _userData?['uid'] ?? _userData?['custom_user_id'] ?? 'N/A';
+      
+      // Migrate custom_user_id to uid if needed
+      if (_userData?['custom_user_id'] != null && _userData?['uid'] == null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'uid': _userData!['custom_user_id'],
+        });
+        _userData!['uid'] = _userData!['custom_user_id'];
+      }
 
       // FIX 2: Handle birthDate as a native Firestore Timestamp
       final rawBirthDate = _userData?['birthDate'];
@@ -107,6 +126,11 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
       }
 
       _bioController = TextEditingController(text: _userData?['bio'] ?? '');
+      _nameController = TextEditingController(text: _userData?['name'] ?? '');
+      _emailController = TextEditingController(text: _userData?['email'] ?? '');
+      _passwordController = TextEditingController();
+      _confirmPasswordController = TextEditingController();
+      _gender = _userData?['gender'] as String?;
 
       // Load interests and disabilities from document references
       _userData!['interest'] =
@@ -199,9 +223,361 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
     }
   }
 
+  Future<void> _editName() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController(text: _nameController.text);
+        return AlertDialog(
+          title: const Text('Edit Name'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (value) => Navigator.pop(context, value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    
+    if (result != null && result.isNotEmpty) {
+      setState(() {
+        _nameController.text = result;
+      });
+      await _updateField('name', result);
+    }
+  }
+
+  Future<void> _editDateOfBirth() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(2000),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _birthDate = picked;
+      });
+      await _updateField('birthDate', picked);
+    }
+  }
+
+  Future<void> _editGender() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Gender'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ['Male', 'Female', 'Other'].map((gender) {
+            return ListTile(
+              title: Text(gender),
+              leading: Radio<String>(
+                value: gender,
+                groupValue: _gender,
+                onChanged: (value) {
+                  Navigator.pop(context, value);
+                },
+              ),
+              onTap: () => Navigator.pop(context, gender),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+    
+    if (result != null) {
+      setState(() {
+        _gender = result;
+      });
+      await _updateField('gender', result);
+    }
+  }
+
+  Future<void> _editEmail() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) {
+        final newEmailController = TextEditingController(text: _emailController.text);
+        final passwordController = TextEditingController();
+        
+        return AlertDialog(
+          title: const Text('Edit Email'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: newEmailController,
+                  autofocus: true,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'New Email',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Current Password (for verification)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (newEmailController.text.isEmpty || !newEmailController.text.contains('@')) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter a valid email address")),
+                  );
+                  return;
+                }
+                if (passwordController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter your current password")),
+                  );
+                  return;
+                }
+                Navigator.pop(context, {
+                  'email': newEmailController.text,
+                  'password': passwordController.text,
+                });
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    
+    if (result != null) {
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null && user.email != null) {
+          // Re-authenticate user first
+          final credential = EmailAuthProvider.credential(
+            email: user.email!,
+            password: result['password']!,
+          );
+          await user.reauthenticateWithCredential(credential);
+          
+          // Try to update email in Firebase Auth
+          try {
+            await user.updateEmail(result['email']!);
+            // If successful, also update in Firestore
+            await _updateField('email', result['email']);
+            
+            setState(() {
+              _emailController.text = result['email']!;
+            });
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Email updated successfully. Please verify your new email.")),
+              );
+            }
+          } catch (authError) {
+            // If Firebase Auth doesn't allow email update, just update in Firestore
+            if (authError.toString().contains('operation-not-allowed')) {
+              // Update only in Firestore
+              await _updateField('email', result['email']);
+              
+              setState(() {
+                _emailController.text = result['email']!;
+              });
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Email updated in profile. Note: Login email remains unchanged due to Firebase settings."),
+                    duration: Duration(seconds: 4),
+                  ),
+                );
+              }
+            } else {
+              // Re-throw other errors
+              rethrow;
+            }
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          String errorMessage = "Error updating email: ${e.toString()}";
+          if (e.toString().contains('email-already-in-use')) {
+            errorMessage = "This email is already in use by another account.";
+          } else if (e.toString().contains('invalid-credential') || e.toString().contains('wrong-password')) {
+            errorMessage = "Incorrect password. Please try again.";
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage)),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) {
+        final currentPasswordController = TextEditingController();
+        final newPasswordController = TextEditingController();
+        final confirmPasswordController = TextEditingController();
+        
+        return AlertDialog(
+          title: const Text('Change Password'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Current Password',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (newPasswordController.text != confirmPasswordController.text) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Passwords do not match")),
+                  );
+                  return;
+                }
+                if (newPasswordController.text.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Password must be at least 6 characters")),
+                  );
+                  return;
+                }
+                Navigator.pop(context, {
+                  'current': currentPasswordController.text,
+                  'new': newPasswordController.text,
+                });
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    
+    if (result != null) {
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null && user.email != null) {
+          // Re-authenticate user
+          final credential = EmailAuthProvider.credential(
+            email: user.email!,
+            password: result['current']!,
+          );
+          await user.reauthenticateWithCredential(credential);
+          
+          // Update password
+          await user.updatePassword(result['new']!);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Password changed successfully")),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Error changing password: ${e.toString()}")),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _updateField(String field, dynamic value) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({field: value});
+        
+        setState(() {
+          _userData?[field] = value;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("$field updated successfully")),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error updating $field: $e")),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _bioController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -293,18 +669,33 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _infoRow("Name", name),
+                  _editableInfoRow("Name", name, _editName),
                   const SizedBox(height: 10),
-                  _infoRow(
+                  _editableInfoRow(
                     "Date of Birth",
                     displayBirthDate,
+                    _editDateOfBirth,
                   ),
                   const SizedBox(height: 10),
-                  _infoRow("Gender", gender),
+                  _editableInfoRow("Gender", gender, _editGender),
                   const SizedBox(height: 10),
-                  _chipSection("Interest", interest),
+                  _editableInfoRow("Email", _userData?['email'] ?? '', _editEmail),
                   const SizedBox(height: 10),
-                  _chipSection("Disability", disability),
+                  _passwordRow(),
+                  const SizedBox(height: 10),
+                  _editableChipSection("Interest", interest, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const InterestsPage()),
+                    ).then((_) => _fetchUserData());
+                  }),
+                  const SizedBox(height: 10),
+                  _editableChipSection("Disability", disability, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const DisabilityPage()),
+                    ).then((_) => _fetchUserData());
+                  }),
                   const SizedBox(height: 12),
                   const Text("Bio", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
@@ -358,11 +749,85 @@ class _FinalProfilePageState extends State<FinalProfilePage> {
     );
   }
 
+  Widget _editableInfoRow(String label, String value, VoidCallback onEdit) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration:
+      BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          Flexible(
+            child: Text(value),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18),
+            onPressed: onEdit,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _passwordRow() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration:
+      BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text("Password", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          const Flexible(
+            child: Text("••••••••", style: TextStyle(letterSpacing: 2)),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18),
+            onPressed: _changePassword,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _chipSection(String title, List<String> items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: items.map((i) => Chip(label: Text(i))).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _editableChipSection(String title, List<String> items, VoidCallback onEdit) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.edit, size: 18),
+              onPressed: onEdit,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
