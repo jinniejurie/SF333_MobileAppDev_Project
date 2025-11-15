@@ -244,33 +244,66 @@ class _CreateEventPageState extends State<CreateEventPage> {
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _titleController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Title',
                               filled: true,
-                              fillColor: Color(0xFFF7F8FF),
-                              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                              fillColor: const Color(0xFFF7F8FF),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _locationController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Location',
                               filled: true,
-                              fillColor: Color(0xFFF7F8FF),
-                              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                              fillColor: const Color(0xFFF7F8FF),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _imageUrlController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Image URL (optional)',
                               filled: true,
-                              fillColor: Color(0xFFF7F8FF),
-                              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                              fillColor: const Color(0xFFF7F8FF),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),

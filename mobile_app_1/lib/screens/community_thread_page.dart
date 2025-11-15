@@ -135,11 +135,22 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                         Expanded(
                           child: TextField(
                             controller: controller,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Write a comment...',
                               filled: true,
-                              fillColor: Color(0xFFF5F6FF),
-                              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                              fillColor: const Color(0xFFF5F6FF),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
@@ -336,12 +347,23 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                         _searchQuery = value.toLowerCase();
                       });
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Search threads...',
-                      prefixIcon: Icon(Icons.search),
+                      prefixIcon: const Icon(Icons.search),
                       filled: true,
-                      fillColor: Color(0xFFF5F6FF),
-                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                      fillColor: const Color(0xFFF5F6FF),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
@@ -424,7 +446,9 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Colors.black26),
+                                    boxShadow: const [
+                                      BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+                                    ],
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(14),

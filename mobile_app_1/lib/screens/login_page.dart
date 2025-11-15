@@ -70,7 +70,17 @@ class _LoginPageState extends State<LoginPage> {
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
               onPressed: _onLogin,
-              child: const Text('Login'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF90CAF9),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: const Text(
+                'Login',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
             ),
           ],
         ),

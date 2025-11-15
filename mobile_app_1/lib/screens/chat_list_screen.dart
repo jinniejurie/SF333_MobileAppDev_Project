@@ -64,21 +64,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ),
                               Align(
                                 alignment: Alignment.centerRight,
-                                child: Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.06),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(context, '/profileSettings');
+                                  },
+                                  child: Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.06),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.person_outline, size: 20),
                                   ),
-                                  child: const Icon(Icons.person_outline, size: 20),
                                 ),
                               ),
                             ],
@@ -261,7 +266,7 @@ class _SegmentedHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: const Color(0xFFF1E8FF),
+              color: const Color(0xFFD6F0FF),
             ),
             child: Row(
               children: [

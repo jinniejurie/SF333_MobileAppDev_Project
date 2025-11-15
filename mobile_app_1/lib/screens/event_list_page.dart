@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'event_detail_page.dart';
 import 'community_home.dart';
 import 'create_post_page.dart';
+import 'create_event_page.dart';
 
 class EventListPage extends StatefulWidget {
   const EventListPage({super.key});
@@ -66,7 +67,56 @@ class _EventListPageState extends State<EventListPage> {
           ),
         ),
         child: SafeArea(
-          child: StreamBuilder<QuerySnapshot>(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Events',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CreateEventPage(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF90CAF9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.add, color: Colors.white, size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              'Create Event',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('events').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -107,7 +157,7 @@ class _EventListPageState extends State<EventListPage> {
               });
               
               return ListView.builder(
-                padding: const EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.only(top: 8),
                 itemCount: filteredDocs.length,
                 itemBuilder: (context, index) {
                   final event = filteredDocs[index].data() as Map<String, dynamic>;
@@ -254,6 +304,10 @@ class _EventListPageState extends State<EventListPage> {
               );
             },
           ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _EventBottomBar(
@@ -261,7 +315,7 @@ class _EventListPageState extends State<EventListPage> {
         onChanged: (i) => setState(() => _currentIndex = i),
         onPlus: () async {
           await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const CreatePostPage()),
+            MaterialPageRoute(builder: (_) => const CreateEventPage()),
           );
         },
       ),

@@ -184,10 +184,13 @@ class _WelcomePageState extends State<WelcomePage> {
                       );
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.black, width: 2),
+                      backgroundColor: Colors.white,
+                      side: BorderSide.none,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(25),
                       ),
+                      elevation: 2,
+                      shadowColor: Colors.black12,
                     ),
                     child: const Text(
                       'Sign Up',

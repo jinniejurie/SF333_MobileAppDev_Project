@@ -192,11 +192,22 @@ class _CommunityHomeState extends State<CommunityHome> {
                         Expanded(
                           child: TextField(
                             controller: controller,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Write a comment...',
                               filled: true,
-                              fillColor: Color(0xFFF5F6FF),
-                              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                              fillColor: const Color(0xFFF5F6FF),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
@@ -365,7 +376,19 @@ class _CommunityHomeState extends State<CommunityHome> {
                               child: const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
                             ),
                             const SizedBox(width: 12),
-                            const Icon(Icons.notifications_none),
+                            IconButton(
+                              onPressed: () {
+                                // TODO: Navigate to notifications page
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Notifications feature coming soon!')),
+                                );
+                              },
+                              icon: const Icon(Icons.notifications, size: 26),
+                              style: IconButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
                           ]),
                         ],
                       ),
@@ -390,12 +413,23 @@ class _CommunityHomeState extends State<CommunityHome> {
                               _searchQuery = value.toLowerCase();
                             });
                           },
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: 'Search posts...',
-                            prefixIcon: Icon(Icons.search),
+                            prefixIcon: const Icon(Icons.search),
                             filled: true,
-                            fillColor: Color(0xFFF5F6FF),
-                            border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                            fillColor: const Color(0xFFF5F6FF),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                         ),
                       ],
@@ -527,9 +561,8 @@ class _CommunityHomeState extends State<CommunityHome> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.black38),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -558,7 +591,6 @@ class _PostCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black26),
         boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
         ],
@@ -639,7 +671,9 @@ class _PostCard extends StatelessWidget {
                           child: Chip(
                             label: Text('#$t'),
                             backgroundColor: const Color(0xFFF5F6FF),
-                            shape: const StadiumBorder(side: BorderSide(color: Colors.black26)),
+                            elevation: 2,
+                            shadowColor: Colors.black12,
+                            shape: const StadiumBorder(),
                           ),
                         ))
                     .toList(),
@@ -985,7 +1019,9 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                             decoration: BoxDecoration(
                               color: bg,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.black54),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+                              ],
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
@@ -1005,7 +1041,9 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: Colors.black),
+                                          boxShadow: const [
+                                            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+                                          ],
                                         ),
                                         child: const Text('JOIN', style: TextStyle(fontWeight: FontWeight.w700)),
                                       ),

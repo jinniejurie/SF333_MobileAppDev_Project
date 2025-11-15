@@ -214,9 +214,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 onTap: _pickAvatar,
                 child: CircleAvatar(
                   radius: 50,
+                  backgroundColor: const Color(0xFFD6F0FF),
                   backgroundImage: _avatar != null ? FileImage(_avatar!) : null,
                   child: _avatar == null
-                      ? const Icon(Icons.add_a_photo, size: 32)
+                      ? const Icon(Icons.add_a_photo, size: 32, color: Color(0xFF90CAF9))
                       : null,
                 ),
               ),
@@ -280,7 +281,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ElevatedButton(
                 onPressed: _loading ? null : _signup,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: const Color(0xFF90CAF9),
                   padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30)),

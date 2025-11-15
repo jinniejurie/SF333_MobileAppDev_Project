@@ -14,7 +14,7 @@ class AppBottomNavBar extends StatelessWidget {
     required this.onPlus,
   });
 
-  Color _color(int i) => currentIndex == i ? const Color(0xFF4C1D95) : Colors.black54;
+  Color _color(int i) => currentIndex == i ? const Color(0xFF90CAF9) : Colors.black54;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class AppBottomNavBar extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 20),
+          BoxShadow(color: Color(0xFFD6F0FF), blurRadius: 20),
         ],
       ),
       child: Row(
@@ -50,7 +50,7 @@ class AppBottomNavBar extends StatelessWidget {
               height: 48,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF4C1D95),
+                color: Color(0xFF90CAF9),
               ),
               child: const Icon(Icons.add, color: Colors.white),
             ),

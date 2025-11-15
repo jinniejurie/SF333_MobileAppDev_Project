@@ -35,170 +35,190 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          _settingsPages[_currentIndex]['title'],
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Progress indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: LinearProgressIndicator(
-                    value: (_currentIndex + 1) / _settingsPages.length,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
-                  ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  '${_currentIndex + 1}/${_settingsPages.length}',
+                title: Text(
+                  _settingsPages[_currentIndex]['title'],
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Settings menu
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Profile Settings',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
                     color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Manage your personal information and preferences',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                
-                // Settings options
-                ...List.generate(_settingsPages.length, (index) {
-                  final page = _settingsPages[index];
-                  final isSelected = _currentIndex == index;
-                  
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.black : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? Colors.black : Colors.grey[300]!,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: ListTile(
-                      leading: Icon(
-                        page['icon'],
-                        color: isSelected ? Colors.white : Colors.black,
-                        size: 24,
-                      ),
-                      title: Text(
-                        page['title'],
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      trailing: isSelected
-                          ? const Icon(Icons.check, color: Colors.white)
-                          : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                      onTap: () {
-                        setState(() {
-                          _currentIndex = index;
-                        });
-                        _pageController.animateToPage(
-                          index,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      },
-                    ),
-                  );
-                }),
-                
-                const SizedBox(height: 30),
-                
-                // Action buttons
-                Row(
+                centerTitle: true,
+              ),
+              // Progress indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.grey),
-                        ),
+                      child: LinearProgressIndicator(
+                        value: (_currentIndex + 1) / _settingsPages.length,
+                        backgroundColor: Colors.grey[300],
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF90CAF9)),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => _settingsPages[_currentIndex]['page'],
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Edit',
-                          style: TextStyle(color: Colors.white),
-                        ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '${_currentIndex + 1}/${_settingsPages.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              
+              // Settings menu
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Profile Settings',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Manage your personal information and preferences',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Settings options
+                      ...List.generate(_settingsPages.length, (index) {
+                        final page = _settingsPages[index];
+                        final isSelected = _currentIndex == index;
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF90CAF9) : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF90CAF9) : Colors.grey[300]!,
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: ListTile(
+                            leading: Icon(
+                              page['icon'],
+                              color: isSelected ? Colors.white : Colors.black,
+                              size: 24,
+                            ),
+                            title: Text(
+                              page['title'],
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? const Icon(Icons.check, color: Colors.white)
+                                : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                            onTap: () {
+                              setState(() {
+                                _currentIndex = index;
+                              });
+                              _pageController.animateToPage(
+                                index,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                          ),
+                        );
+                      }),
+                      
+                      const SizedBox(height: 30),
+                      
+                      // Action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.grey),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => _settingsPages[_currentIndex]['page'],
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF90CAF9),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: const Text(
+                                'Edit',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

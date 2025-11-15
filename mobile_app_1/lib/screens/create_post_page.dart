@@ -129,7 +129,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       onPressed: () => Navigator.of(context).maybePop(),
                     ),
                     Image.asset('assets/cloud_logo.png', width: 40, height: 32),
-                    const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/profileSettings');
+                      },
+                      child: const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
+                    ),
                   ],
                 ),
               ),
@@ -156,11 +161,24 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: _titleController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: 'Title (optional)',
                             filled: true,
-                            fillColor: Color(0xFFF7F8FF),
-                            border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                            fillColor: const Color(0xFFF7F8FF),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ).copyWith(
+                            constraints: const BoxConstraints(),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -175,11 +193,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                               fillColor: const Color(0xFFD6F0FF),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.black26),
+                                borderSide: BorderSide.none,
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.black87),
+                                borderSide: BorderSide.none,
                               ),
                             ),
                           ),
@@ -253,6 +271,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                             onPressed: _isPosting ? null : _submit,
                             icon: const Icon(Icons.send),
                             label: Text(_isPosting ? 'Posting...' : 'Post'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF90CAF9),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
                           ),
                         )
                       ],

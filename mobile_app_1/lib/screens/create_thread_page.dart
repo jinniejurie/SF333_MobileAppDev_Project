@@ -108,11 +108,22 @@ class _CreateThreadPageState extends State<CreateThreadPage> {
                           const SizedBox(height: 8),
                           TextFormField(
                             controller: _titleCtrl,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Title',
                               filled: true,
-                              fillColor: Color(0xFFF7F8FF),
-                              border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                              fillColor: const Color(0xFFF7F8FF),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                           ),

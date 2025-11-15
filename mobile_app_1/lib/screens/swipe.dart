@@ -126,8 +126,8 @@ class _CardSwipeState extends State<CardSwipe> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFF8736CE),
-              Color(0xFFE0CFFF),
+              Color(0xFFD6F0FF),
+              Color(0xFFEFF4FF),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -135,26 +135,28 @@ class _CardSwipeState extends State<CardSwipe> {
         ),
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/cloud_logo.png',
-                    width: 70,
-                    height: 60,
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'Discover People',
-                    style: TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/cloud_logo.png',
+                      width: 42,
+                      height: 34,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Discover People',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -259,17 +261,33 @@ class _CardSwipeState extends State<CardSwipe> {
                                             height: 300,
                                             width: 300,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) => const Icon(
-                                              Icons.person,
-                                              size: 300,
-                                              color: Color(0xFFD0F3FF),
+                                            errorBuilder: (context, error, stackTrace) => Container(
+                                              width: 300,
+                                              height: 300,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFD6F0FF),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: const Icon(
+                                                Icons.person,
+                                                size: 150,
+                                                color: Color(0xFF90CAF9),
+                                              ),
                                             ),
                                           ),
                                         )
-                                            : const Icon(
-                                          Icons.person,
-                                          size: 300,
-                                          color: Color(0xFFD0F3FF),
+                                            : Container(
+                                          width: 300,
+                                          height: 300,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFD6F0FF),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: const Icon(
+                                            Icons.person,
+                                            size: 150,
+                                            color: Color(0xFF90CAF9),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -328,7 +346,7 @@ class _CardSwipeState extends State<CardSwipe> {
                                                 style: const TextStyle(color: Colors.black),
                                               ),
                                               backgroundColor:
-                                              const Color(0xFFD0F3FF),
+                                              const Color(0xFFD6F0FF),
                                               shape: const StadiumBorder(
                                                 side: BorderSide(
                                                     color: Colors.black,

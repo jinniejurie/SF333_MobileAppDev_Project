@@ -104,6 +104,10 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                     },
                     icon: const Icon(Icons.check),
                     label: const Text('Create'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF90CAF9),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 )
               ],
@@ -188,7 +192,12 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Image.asset('assets/cloud_logo.png', width: 42, height: 34),
-                  const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/profileSettings');
+                    },
+                    child: const CircleAvatar(radius: 14, backgroundColor: Colors.black12, child: Icon(Icons.person, size: 16)),
+                  ),
                 ]),
               ),
               const Padding(
@@ -230,12 +239,23 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                         _searchQuery = value.toLowerCase();
                       });
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Search communities...',
-                      prefixIcon: Icon(Icons.search),
+                      prefixIcon: const Icon(Icons.search),
                       filled: true,
-                      fillColor: Color(0xFFF5F6FF),
-                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                      fillColor: const Color(0xFFF5F6FF),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
@@ -278,7 +298,13 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           child: Container(
-                            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black54)),
+                            decoration: BoxDecoration(
+                              color: bg,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+                              ],
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -292,7 +318,13 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                                     onTap: () => _joinAndOpen(filteredDocs[index].id, name, colorHex),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black)),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: const [
+                                          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+                                        ],
+                                      ),
                                       child: const Text('JOIN', style: TextStyle(fontWeight: FontWeight.w700)),
                                     ),
                                   ),

@@ -64,13 +64,18 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           ),
                           Align(
                             alignment: Alignment.centerRight,
-                            child: Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 2))
-                              ]),
-                              child: const Icon(Icons.person_outline, size: 20),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/profileSettings');
+                              },
+                              child: Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [
+                                  BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 2))
+                                ]),
+                                child: const Icon(Icons.person_outline, size: 20),
+                              ),
                             ),
                           ),
                         ],
@@ -139,7 +144,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                           CircleAvatar(
                                             radius: 48,
                                             backgroundImage: (photo != null && photo.isNotEmpty) ? NetworkImage(photo) : null,
-                                            backgroundColor: const Color(0xFFF0F0F0),
+                                            backgroundColor: const Color(0xFFD6F0FF),
                                             child: (photo == null || photo.isEmpty) ? const Icon(Icons.person, size: 40) : null,
                                           ),
                                           const SizedBox(height: 10),
@@ -242,7 +247,7 @@ class _Segmented extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: const Color(0xFFF5EAFE), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: Colors.black.withOpacity(0.08), borderRadius: BorderRadius.circular(16)),
       padding: const EdgeInsets.all(6),
       child: Row(
         children: [
