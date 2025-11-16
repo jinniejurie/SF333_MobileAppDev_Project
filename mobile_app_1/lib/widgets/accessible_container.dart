@@ -1,7 +1,18 @@
+/// Container widget that adapts to accessibility settings.
+/// 
+/// Automatically applies high contrast mode styling (white background with
+/// thick black borders) when enabled. Removes gradients and shadows in
+/// high contrast mode for better visibility.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/accessibility_provider.dart';
 
+/// A container that adapts its decoration based on accessibility settings.
+/// 
+/// In high contrast mode, replaces gradients with white backgrounds and
+/// adds thick black borders. Removes shadows for better contrast.
 class AccessibleContainer extends StatelessWidget {
   final Widget child;
   final BoxDecoration? decoration;
@@ -28,38 +39,10 @@ class AccessibleContainer extends StatelessWidget {
       builder: (context, accessibility, _) {
         BoxDecoration? finalDecoration;
 
-        // Apply high contrast mode
+        // Apply high contrast mode transformations
         if (accessibility.highContrastMode) {
-          // In high contrast mode, always use white background with thick black border
-          if (decoration != null) {
-            // Copy all properties except gradient, and set color to white with thick border
-            finalDecoration = BoxDecoration(
-              color: Colors.white,
-              borderRadius: decoration!.borderRadius,
-              border: decoration!.border != null
-                  ? Border.all(
-                      color: Colors.black,
-                      width: 3, // Thick border for high contrast
-                    )
-                  : Border.all(
-                      color: Colors.black,
-                      width: 3, // Thick border for high contrast
-                    ),
-              boxShadow: null, // Remove shadows in high contrast mode
-              shape: decoration!.shape,
-            );
-          } else {
-            // If no decoration, use white background with thick black border
-            finalDecoration = BoxDecoration(
-              color: Colors.white,
-              border: Border.all(
-                color: Colors.black,
-                width: 3, // Thick border for high contrast
-              ),
-            );
-          }
+          finalDecoration = _buildHighContrastDecoration(decoration);
         } else {
-          // Normal mode - use original decoration
           finalDecoration = decoration;
         }
 
@@ -74,6 +57,29 @@ class AccessibleContainer extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Builds a high contrast decoration with white background and thick black border.
+  BoxDecoration _buildHighContrastDecoration(BoxDecoration? decoration) {
+    const thickBlackBorder = BorderSide(color: Colors.black, width: 3);
+    
+    if (decoration != null) {
+      return BoxDecoration(
+        color: Colors.white,
+        borderRadius: decoration.borderRadius,
+        border: Border.all(
+          color: Colors.black,
+          width: 3, // Thick border for high contrast
+        ),
+        boxShadow: null, // Remove shadows in high contrast mode
+        shape: decoration.shape,
+      );
+    } else {
+      return const BoxDecoration(
+        color: Colors.white,
+        border: Border.fromBorderSide(thickBlackBorder),
+      );
+    }
   }
 }
 

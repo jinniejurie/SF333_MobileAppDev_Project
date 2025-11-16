@@ -10,6 +10,7 @@ import '../widgets/app_bottom_navbar.dart';
 import '../widgets/accessible_container.dart';
 import '../services/swipe_service.dart';
 import '../providers/accessibility_provider.dart';
+import 'swipe_detail_page.dart';
 
 class CardSwipe extends StatefulWidget {
   const CardSwipe({super.key});
@@ -261,9 +262,11 @@ class _CardSwipeState extends State<CardSwipe> {
               ),
             ),
             Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 100), // Add padding to prevent navigator from blocking
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
                   Align(
                     alignment: Alignment.topCenter,
                     child: SizedBox(
@@ -394,139 +397,155 @@ class _CardSwipeState extends State<CardSwipe> {
 
                               return Consumer<AccessibilityProvider>(
                                 builder: (context, accessibility, _) {
-                                  return Container(
-                                    margin: const EdgeInsets.all(8),
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(30),
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: accessibility.highContrastMode ? 3 : 1,
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => SwipeDetailPage(
+                                            userId: doc.id,
+                                            name: name,
+                                            gender: gender,
+                                            bio: bio,
+                                            age: age,
+                                            profileImageUrl: profileImageUrl,
+                                            profileImageBytes: profileImageBytes,
+                                            disabilities: disabilities,
+                                            interests: interests,
+                                            distanceText: distanceText,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30),
+                                        border: Border.all(
+                                          color: Colors.black,
+                                          width: accessibility.highContrastMode ? 3 : 1,
+                                        ),
+                                        boxShadow: accessibility.highContrastMode
+                                            ? null // Remove shadows in high contrast mode
+                                            : [
+                                                BoxShadow(
+                                                    color: Colors.black26,
+                                                    blurRadius: 10,
+                                                    offset: const Offset(0, 5))
+                                              ],
                                       ),
-                                      boxShadow: accessibility.highContrastMode
-                                          ? null // Remove shadows in high contrast mode
-                                          : [
-                                              BoxShadow(
-                                                  color: Colors.black26,
-                                                  blurRadius: 10,
-                                                  offset: const Offset(0, 5))
-                                            ],
+                                      child: SingleChildScrollView(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Center(
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(20),
+                                                child: _buildProfileImage(
+                                                  profileImageUrl,
+                                                  profileImageBytes,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  name,
+                                                  style: const TextStyle(
+                                                      fontSize: 28,
+                                                      color: Colors.black,
+                                                      fontWeight: FontWeight.bold),
+                                                ),
+                                                const SizedBox(width: 5),
+                                                Text(
+                                                  ', $age',
+                                                  style: const TextStyle(
+                                                      fontSize: 28,
+                                                      color: Colors.black,
+                                                      fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
+                                            ),
+                                            if (gender.isNotEmpty)
+                                              Text(
+                                                gender,
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color: Colors.black),
+                                              ),
+                                            const SizedBox(height: 2),
+                                            if (distanceText.isNotEmpty)
+                                              Text(
+                                                distanceText,
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.grey[500]),
+                                              ),
+                                            const SizedBox(height: 15),
+                                            if (bio.isNotEmpty)
+                                              Text(
+                                                bio,
+                                                style: const TextStyle(fontSize: 16),
+                                              ),
+                                            if (disabilities.isNotEmpty)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 20),
+                                                child: Consumer<AccessibilityProvider>(
+                                                  builder: (context, accessibility, _) {
+                                                    return Wrap(
+                                                      spacing: 8,
+                                                      runSpacing: 4,
+                                                      children: disabilities
+                                                          .map((i) => Chip(
+                                                                label: Text(
+                                                                  i,
+                                                                  style: const TextStyle(color: Colors.black),
+                                                                ),
+                                                                backgroundColor: accessibility.highContrastMode
+                                                                    ? Colors.white
+                                                                    : const Color(0xFFD6F0FF),
+                                                                shape: StadiumBorder(
+                                                                  side: BorderSide(
+                                                                      color: Colors.black,
+                                                                      width: accessibility.highContrastMode ? 2 : 1),
+                                                                ),
+                                                              ))
+                                                          .toList(),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            if (interests.isNotEmpty)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 10),
+                                                child: Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 4,
+                                                  children: interests
+                                                      .map((i) => Chip(
+                                                            label: Text(
+                                                              i,
+                                                              style: const TextStyle(color: Colors.white),
+                                                            ),
+                                                            backgroundColor: Colors.black,
+                                                            shape: const StadiumBorder(
+                                                              side: BorderSide(
+                                                                  color: Colors.black,
+                                                                  width: 1),
+                                                            ),
+                                                          ))
+                                                      .toList(),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                child: SingleChildScrollView(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Center(
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(20),
-                                          child: _buildProfileImage(
-                                            profileImageUrl,
-                                            profileImageBytes,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            name,
-                                            style: const TextStyle(
-                                                fontSize: 28,
-                                                color: Colors.black,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            ', $age',
-                                            style: const TextStyle(
-                                                fontSize: 28,
-                                                color: Colors.black,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        ],
-                                      ),
-                                      if (gender.isNotEmpty)
-                                        Text(
-                                          gender,
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: Colors.black),
-                                        ),
-                                      const SizedBox(height: 2),
-                                      if (distanceText.isNotEmpty)
-                                        Text(
-                                          distanceText,
-                                          style: TextStyle(
-                                              fontSize: 16,
-                                              color: Colors.grey[500]),
-                                        ),
-                                      const SizedBox(height: 15),
-                                      if (bio.isNotEmpty)
-                                        Text(
-                                          bio,
-                                          style: const TextStyle(fontSize: 16),
-                                        ),
-                                      if (disabilities.isNotEmpty)
-                                        Padding(
-                                          padding:
-                                          const EdgeInsets.only(top: 20),
-                                          child: Consumer<AccessibilityProvider>(
-                                            builder: (context, accessibility, _) {
-                                              return Wrap(
-                                                spacing: 8,
-                                                runSpacing: 4,
-                                                children: disabilities
-                                                    .map((i) => Chip(
-                                                  label: Text(
-                                                    i,
-                                                    style: const TextStyle(color: Colors.black),
-                                                  ),
-                                                  backgroundColor: accessibility.highContrastMode
-                                                      ? Colors.white
-                                                      : const Color(0xFFD6F0FF),
-                                                  shape: StadiumBorder(
-                                                    side: BorderSide(
-                                                        color: Colors.black,
-                                                        width: accessibility.highContrastMode ? 2 : 1),
-                                                  ),
-                                                ))
-                                                    .toList(),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      if (interests.isNotEmpty)
-                                        Padding(
-                                          padding:
-                                          const EdgeInsets.only(top: 10),
-                                          child: Wrap(
-                                            spacing: 8,
-                                            runSpacing: 4,
-                                            children: interests
-                                                .map((i) => Chip(
-                                              label: Text(
-                                                i,
-                                                style: const TextStyle(color: Colors.white),
-                                              ),
-                                              backgroundColor:
-                                              Colors.black,
-                                              shape: const StadiumBorder(
-                                                side: BorderSide(
-                                                    color: Colors.black,
-                                                    width: 1),
-                                              ),
-                                            ))
-                                                .toList(),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              );
+                                  );
                                 },
                               );
                               } catch (e, stackTrace) {
@@ -636,7 +655,8 @@ class _CardSwipeState extends State<CardSwipe> {
                       ),
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

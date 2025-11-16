@@ -1,23 +1,34 @@
+/// Provider for managing accessibility settings.
+/// 
+/// Handles high contrast mode and dynamic font scaling.
+/// Persists settings using SharedPreferences.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Provider for accessibility features including high contrast mode
+/// and dynamic font scaling.
 class AccessibilityProvider extends ChangeNotifier {
   bool _highContrastMode = false;
-  bool _ttsEnabled = false;
   double _fontScale = 1.0;
 
+  /// Whether high contrast mode is enabled.
   bool get highContrastMode => _highContrastMode;
-  bool get ttsEnabled => _ttsEnabled;
+  
+  /// Current font scale multiplier (0.8 to 1.5).
   double get fontScale => _fontScale;
 
   AccessibilityProvider() {
     _loadSettings();
   }
 
+  /// Loads accessibility settings from persistent storage.
+  /// 
+  /// Clamps font scale to valid range (0.8-1.5) to prevent slider errors.
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _highContrastMode = prefs.getBool('high_contrast_mode') ?? false;
-    _ttsEnabled = prefs.getBool('tts_enabled') ?? false;
     final savedFontScale = prefs.getDouble('font_scale') ?? 1.0;
     // Clamp font scale to valid range (0.8 - 1.5) to prevent slider errors
     _fontScale = savedFontScale.clamp(0.8, 1.5);
@@ -28,6 +39,9 @@ class AccessibilityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Enables or disables high contrast mode.
+  /// 
+  /// Persists the setting and notifies listeners to update the UI.
   Future<void> setHighContrastMode(bool value) async {
     _highContrastMode = value;
     final prefs = await SharedPreferences.getInstance();
@@ -35,13 +49,9 @@ class AccessibilityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setTtsEnabled(bool value) async {
-    _ttsEnabled = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('tts_enabled', value);
-    notifyListeners();
-  }
-
+  /// Sets the font scale multiplier.
+  /// 
+  /// Persists the setting and notifies listeners to update text sizes.
   Future<void> setFontScale(double value) async {
     _fontScale = value;
     final prefs = await SharedPreferences.getInstance();
@@ -49,11 +59,15 @@ class AccessibilityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Gets the appropriate theme based on accessibility settings.
+  /// 
+  /// Returns a high contrast (black/white) theme if high contrast mode is enabled,
+  /// otherwise returns the normal blue theme with dynamic font scaling.
   ThemeData getTheme(BuildContext context, {bool? highContrast}) {
     final useHighContrast = highContrast ?? _highContrastMode;
     
     if (useHighContrast) {
-      // High Contrast Mode - Black and White
+      // High Contrast Mode - Black and White with thick borders
       return ThemeData(
         brightness: Brightness.light,
         primaryColor: Colors.black,
@@ -126,6 +140,9 @@ class AccessibilityProvider extends ChangeNotifier {
     }
   }
 
+  /// Builds a TextTheme with dynamic font scaling.
+  /// 
+  /// Combines device text scale factor with user's custom font scale setting.
   TextTheme _getTextTheme(BuildContext context) {
     final baseScale = MediaQuery.of(context).textScaleFactor;
     final customScale = _fontScale;

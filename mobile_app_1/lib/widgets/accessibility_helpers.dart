@@ -1,8 +1,17 @@
+/// Helper utilities for accessibility-aware styling.
+/// 
+/// Provides static methods to get colors, decorations, and styles
+/// that adapt to high contrast mode.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/accessibility_provider.dart';
 
-/// Helper class for accessibility color management
+/// Helper class for accessibility-aware color and style management.
+/// 
+/// All methods check the current accessibility settings and return
+/// appropriate values for high contrast or normal mode.
 class AccessibilityHelpers {
   /// Get background color based on high contrast mode
   static Color getBackgroundColor(BuildContext context) {

@@ -1,9 +1,19 @@
+/// Bottom navigation bar widget with accessibility support.
+/// 
+/// Provides navigation between main app sections with icons that adapt
+/// to high contrast mode. Includes semantic labels for screen readers.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../screens/community_discover_page.dart';
 import '../screens/swipe.dart';
 import '../providers/accessibility_provider.dart';
 
+/// Bottom navigation bar for main app navigation.
+/// 
+/// Displays icons for Home, Explore, Create, Friends, and Chat.
+/// Adapts colors based on accessibility settings.
 class AppBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onChanged;
@@ -16,9 +26,13 @@ class AppBottomNavBar extends StatelessWidget {
     required this.onPlus,
   });
 
-  Color _color(int i, bool isHighContrast) => currentIndex == i 
-      ? (isHighContrast ? Colors.black : const Color(0xFF90CAF9)) 
-      : Colors.black54;
+  /// Gets the appropriate icon color based on selection and contrast mode.
+  Color _getIconColor(int index, bool isHighContrast) {
+    if (currentIndex == index) {
+      return isHighContrast ? Colors.black : const Color(0xFF90CAF9);
+    }
+    return Colors.black54;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +62,7 @@ class AppBottomNavBar extends StatelessWidget {
                 button: true,
                 child: IconButton(
                   onPressed: () => onChanged(0),
-                  icon: Icon(Icons.home_rounded, color: _color(0, isHighContrast)),
+                  icon: Icon(Icons.home_rounded, color: _getIconColor(0, isHighContrast)),
                 ),
               ),
               Semantics(
@@ -60,7 +74,7 @@ class AppBottomNavBar extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
                     );
                   },
-                  icon: Icon(Icons.explore_outlined, color: _color(1, isHighContrast)),
+                  icon: Icon(Icons.explore_outlined, color: _getIconColor(1, isHighContrast)),
                 ),
               ),
               Semantics(
@@ -86,7 +100,7 @@ class AppBottomNavBar extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).pushNamed('/friendsScreen');
                   },
-                  icon: Icon(Icons.group_outlined, color: _color(3, isHighContrast)),
+                  icon: Icon(Icons.group_outlined, color: _getIconColor(3, isHighContrast)),
                 ),
               ),
               Semantics(
@@ -98,7 +112,7 @@ class AppBottomNavBar extends StatelessWidget {
                   },
                   icon: Stack(
                     children: [
-                      Icon(Icons.chat_bubble_outline, color: _color(4, isHighContrast)),
+                      Icon(Icons.chat_bubble_outline, color: _getIconColor(4, isHighContrast)),
                       Positioned(
                         right: 0,
                         top: 0,

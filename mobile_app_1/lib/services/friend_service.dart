@@ -1,6 +1,12 @@
+/// Service for managing friend relationships.
+/// 
+/// Handles friend requests, acceptances, and friend list management.
+library;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Service for managing friend relationships and requests.
 class FriendService {
   FriendService({FirebaseFirestore? firestore, FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -14,6 +20,9 @@ class FriendService {
   CollectionReference<Map<String, dynamic>> _friendsCollection(String uid) =>
       _firestore.collection('friends').doc(uid).collection('list');
 
+  /// Sends a friend request to a target user.
+  /// 
+  /// Creates bidirectional pending friend records using a batch write.
   Future<void> sendFriendRequest(String targetUserId) async {
     final now = FieldValue.serverTimestamp();
 
@@ -39,6 +48,9 @@ class FriendService {
     await batch.commit();
   }
 
+  /// Accepts a friend request from a requester.
+  /// 
+  /// Updates both users' friend records to 'accepted' status.
   Future<void> acceptFriendRequest(String requesterUserId) async {
     final batch = _firestore.batch();
     final myDoc = _friendsCollection(_uid).doc(requesterUserId);
@@ -59,6 +71,9 @@ class FriendService {
     await batch.commit();
   }
 
+  /// Rejects a friend request or removes an existing friend.
+  /// 
+  /// Deletes the friend relationship from both users' friend lists.
   Future<void> rejectOrRemoveFriend(String otherUserId) async {
     final batch = _firestore.batch();
     batch.delete(_friendsCollection(_uid).doc(otherUserId));
@@ -66,6 +81,7 @@ class FriendService {
     await batch.commit();
   }
 
+  /// Watches the list of accepted friend IDs for a user.
   Stream<List<String>> watchAcceptedFriendIds({String? uid}) {
     final userId = uid ?? _uid;
     return _friendsCollection(userId)
@@ -74,6 +90,7 @@ class FriendService {
         .map((snap) => snap.docs.map((d) => d.id).toList());
   }
 
+  /// Watches incoming friend requests for the current user.
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> watchIncomingRequests() {
     return _friendsCollection(_uid)
         .where('status', isEqualTo: 'pending')
@@ -82,7 +99,10 @@ class FriendService {
         .map((s) => s.docs);
   }
 
-  // Register a right swipe. If they already liked me, accept for both.
+  /// Handles a like action (right swipe) on a user.
+  /// 
+  /// If the target user has already liked the current user, automatically
+  /// accepts the friend request for both users. Otherwise, sends a friend request.
   Future<void> likeUser(String targetUserId) async {
     final myDoc = _friendsCollection(_uid).doc(targetUserId);
     final theirDoc = _friendsCollection(targetUserId).doc(_uid);

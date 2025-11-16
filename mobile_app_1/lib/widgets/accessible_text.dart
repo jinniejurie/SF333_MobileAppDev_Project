@@ -1,7 +1,16 @@
+/// Text widget that adapts to accessibility settings.
+/// 
+/// Applies dynamic font scaling and high contrast colors when enabled.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/accessibility_provider.dart';
 
+/// A text widget that adapts to accessibility settings.
+/// 
+/// Automatically applies font scaling and high contrast colors
+/// based on user's accessibility preferences.
 class AccessibleText extends StatelessWidget {
   final String text;
   final TextStyle? style;
