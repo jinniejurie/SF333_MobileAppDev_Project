@@ -4,10 +4,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 // import 'package:geocoding/geocoding.dart';
 // import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
 import '../widgets/base_page.dart';
+import '../providers/accessibility_provider.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -212,13 +214,25 @@ class _SignUpPageState extends State<SignUpPage> {
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _pickAvatar,
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: const Color(0xFFD6F0FF),
-                  backgroundImage: _avatar != null ? FileImage(_avatar!) : null,
-                  child: _avatar == null
-                      ? const Icon(Icons.add_a_photo, size: 32, color: Color(0xFF90CAF9))
-                      : null,
+                child: Consumer<AccessibilityProvider>(
+                  builder: (context, accessibility, _) {
+                    return CircleAvatar(
+                      radius: 50,
+                      backgroundColor: accessibility.highContrastMode 
+                          ? Colors.white 
+                          : const Color(0xFFD6F0FF),
+                      backgroundImage: _avatar != null ? FileImage(_avatar!) : null,
+                      child: _avatar == null
+                          ? Icon(
+                              Icons.add_a_photo, 
+                              size: 32, 
+                              color: accessibility.highContrastMode 
+                                  ? Colors.black 
+                                  : const Color(0xFF90CAF9),
+                            )
+                          : null,
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 16),
@@ -278,24 +292,30 @@ class _SignUpPageState extends State<SignUpPage> {
                 },
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _loading ? null : _signup,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF90CAF9),
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                ),
-                child: _loading
-                    ? const SizedBox(
-                  height: 24,
-                  width: 24,
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-                    : const Text(
-                  'Next →',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
+              Consumer<AccessibilityProvider>(
+                builder: (context, accessibility, _) {
+                  return ElevatedButton(
+                    onPressed: _loading ? null : _signup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accessibility.highContrastMode 
+                          ? Colors.black 
+                          : const Color(0xFF90CAF9),
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(color: Colors.white),
+                          )
+                        : const Text(
+                            'Next →',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                  );
+                },
               ),
             ],
           ),

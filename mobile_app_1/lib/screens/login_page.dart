@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../widgets/base_page.dart';
+import '../providers/accessibility_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -68,20 +70,26 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 20),
             _isLoading
                 ? const CircularProgressIndicator()
-                : ElevatedButton(
-              onPressed: _onLogin,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF90CAF9),
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Login',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-            ),
+                : Consumer<AccessibilityProvider>(
+                    builder: (context, accessibility, _) {
+                      return ElevatedButton(
+                        onPressed: _onLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accessibility.highContrastMode 
+                              ? Colors.black 
+                              : const Color(0xFF90CAF9),
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      );
+                    },
+                  ),
           ],
         ),
       ),

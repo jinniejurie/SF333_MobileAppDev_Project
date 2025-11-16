@@ -2,10 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'event_detail_page.dart';
 import 'community_home.dart';
 import 'create_post_page.dart';
 import 'create_event_page.dart';
+import '../widgets/accessible_container.dart';
+import '../providers/accessibility_provider.dart';
 
 class EventListPage extends StatefulWidget {
   const EventListPage({super.key});
@@ -58,7 +61,7 @@ class _EventListPageState extends State<EventListPage> {
         ),
         centerTitle: true,
       ),
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
@@ -74,50 +77,62 @@ class _EventListPageState extends State<EventListPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Events',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                    Semantics(
+                      header: true,
+                      child: Expanded(
+                        child: Text(
+                          'Events',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CreateEventPage(),
+                    Consumer<AccessibilityProvider>(
+                      builder: (context, accessibility, _) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CreateEventPage(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: accessibility.highContrastMode 
+                                  ? Colors.black 
+                                  : const Color(0xFF90CAF9),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add, color: Colors.white, size: 18),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Create Event',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF90CAF9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.add, color: Colors.white, size: 18),
-                            SizedBox(width: 6),
-                            Text(
-                              'Create Event',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('events').snapshots(),
+            stream: FirebaseFirestore.instance.collectionGroup('events').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -126,28 +141,57 @@ class _EventListPageState extends State<EventListPage> {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
               final docs = snapshot.data?.docs ?? [];
-              if (docs.isEmpty) {
-                return const Center(child: Text('No events found.'));
-              }
               
               // Filter out past events and sort by upvotes
               final now = DateTime.now();
               final filteredDocs = docs.where((doc) {
-                final data = doc.data();
-                final eventDate = data['date'];
-                if (eventDate != null) {
+                final data = doc.data() as Map<String, dynamic>;
+                
+                // Try to get event end time first, then start time, then date
+                dynamic eventTime = data['end_time'] ?? data['start_time'] ?? data['date'];
+                
+                if (eventTime != null) {
                   DateTime eventDateTime;
-                  if (eventDate is Timestamp) {
-                    eventDateTime = eventDate.toDate();
-                  } else if (eventDate is String) {
-                    eventDateTime = DateTime.parse(eventDate);
-                  } else {
-                    return false;
+                  try {
+                    if (eventTime is Timestamp) {
+                      eventDateTime = eventTime.toDate();
+                    } else if (eventTime is String) {
+                      eventDateTime = DateTime.parse(eventTime);
+                    } else {
+                      // If we can't parse, include the event
+                      return true;
+                    }
+                    // Include event if it hasn't ended yet
+                    return !eventDateTime.isBefore(now);
+                  } catch (e) {
+                    // If parsing fails, include the event
+                    return true;
                   }
-                  return !eventDateTime.isBefore(now);
                 }
+                // If no date/time field, include the event
                 return true;
               }).toList();
+              
+              if (filteredDocs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.event_busy, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No upcoming events found.',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Total events: ${docs.length}',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              }
               
               // Sort by upvote count (highest first)
               filteredDocs.sort((a, b) {
@@ -196,14 +240,24 @@ class _EventListPageState extends State<EventListPage> {
                     }
                   }
 
+                  // Extract communityId from document reference path
+                  // collectionGroup path format: communities/{communityId}/events/{eventId}
+                  final docRef = filteredDocs[index].reference;
+                  final pathParts = docRef.path.split('/');
+                  String? communityId;
+                  if (pathParts.length >= 4 && pathParts[0] == 'communities' && pathParts[2] == 'events') {
+                    communityId = pathParts[1];
+                  }
+                  
                   return GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => EventDetailPage(
-                            eventId: docs[index].id,
+                            eventId: filteredDocs[index].id,
                             currentUserId: currentUserId,
+                            communityId: communityId,
                           ),
                         ),
                       );

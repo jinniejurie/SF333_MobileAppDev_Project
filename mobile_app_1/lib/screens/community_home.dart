@@ -7,6 +7,7 @@ import 'event_detail_page.dart';
 import 'community_discover_page.dart';
 import 'community_thread_page.dart';
 import '../widgets/app_bottom_navbar.dart';
+import '../widgets/accessible_container.dart';
 import 'create_event_page.dart';
 
 class PostItem {
@@ -93,6 +94,8 @@ class _CommunityHomeState extends State<CommunityHome> {
   final Set<String> _likedPostIds = <String>{};
   String _searchQuery = '';
   bool _isSearching = false;
+  
+  String get _pageTitle => _currentIndex == 0 ? 'Explore' : 'Events';
 
   Future<void> _openComposer() async {
     if (_currentIndex == 1) {
@@ -346,7 +349,7 @@ class _CommunityHomeState extends State<CommunityHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
@@ -394,11 +397,16 @@ class _CommunityHomeState extends State<CommunityHome> {
                       ),
                       const SizedBox(height: 10),
                       Row(children: [
-                        Text('Explore',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                            )),
+                        Semantics(
+                          header: true,
+                          child: Expanded(
+                            child: Text('Explore',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                )),
+                          ),
+                        ),
                         SizedBox(width: 8),
                         GestureDetector(
                           onTap: _toggleSearch,
@@ -434,23 +442,62 @@ class _CommunityHomeState extends State<CommunityHome> {
                         ),
                       ],
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          GestureDetector(onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const CardSwipe()),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isWide = constraints.maxWidth > 400;
+                          if (isWide) {
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const CardSwipe()),
+                                      );
+                                    },
+                                    child: _pillButton('Make Friends'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
+                                      );
+                                    },
+                                    child: _pillButton('Join Community'),
+                                  ),
+                                ),
+                              ],
                             );
-                          }, child: _pillButton('Make Friends')),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
-                              );
-                            },
-                            child: _pillButton('Join Community'),
-                          ),
-                        ],
+                          } else {
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const CardSwipe()),
+                                      );
+                                    },
+                                    child: _pillButton('Make Friends'),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
+                                      );
+                                    },
+                                    child: _pillButton('Join Community'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        },
                       ),
                       const SizedBox(height: 16),
                       const Text('Friendzy',
@@ -609,49 +656,71 @@ class _PostCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(post.authorName,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 14)),
+                      Semantics(
+                        label: 'Post author',
+                        child: Text(post.authorName,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 14)),
+                      ),
                     ],
                   ),
                 ),
-                Text(_timeAgo(), style: const TextStyle(color: Colors.grey)),
+                Semantics(
+                  label: 'Posted ${_timeAgo()}',
+                  child: Text(_timeAgo(), style: const TextStyle(color: Colors.grey)),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             if (post.title != null && post.title!.isNotEmpty) ...[
-              Text(post.title!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              Semantics(
+                header: true,
+                child: Text(post.title!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
               const SizedBox(height: 6),
             ],
-            Text(post.content, style: const TextStyle(fontSize: 15)),
+            Semantics(
+              label: 'Post content',
+              child: Text(post.content, style: const TextStyle(fontSize: 15)),
+            ),
             const SizedBox(height: 8),
             _mediaPreview(),
             const SizedBox(height: 12),
             Row(
               children: [
-                InkWell(
-                  onTap: () => onLike(post),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    child: Row(children: [
-                      Icon(isLiked ? Icons.favorite : Icons.favorite_border, size: 18, color: isLiked ? Colors.black : null),
-                      const SizedBox(width: 6),
-                      Text('${post.likes}'),
-                    ]),
+                Semantics(
+                  label: isLiked ? 'Unlike post' : 'Like post',
+                  value: '${post.likes} likes',
+                  button: true,
+                  child: InkWell(
+                    onTap: () => onLike(post),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Row(children: [
+                        Icon(isLiked ? Icons.favorite : Icons.favorite_border, size: 18, color: isLiked ? Colors.black : null),
+                        const SizedBox(width: 6),
+                        Text('${post.likes}'),
+                      ]),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                InkWell(
-                  onTap: () => onComment(post),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    child: Row(children: [
-                      const Icon(Icons.chat_bubble_outline, size: 18),
-                      const SizedBox(width: 6),
-                      Text('${post.comments}'),
-                    ]),
+                Semantics(
+                  label: 'View comments',
+                  value: '${post.comments} comments',
+                  button: true,
+                  child: InkWell(
+                    onTap: () => onComment(post),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Row(children: [
+                        const Icon(Icons.chat_bubble_outline, size: 18),
+                        const SizedBox(width: 6),
+                        Text('${post.comments}'),
+                      ]),
+                    ),
                   ),
                 ),
               ],
@@ -938,7 +1007,7 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],

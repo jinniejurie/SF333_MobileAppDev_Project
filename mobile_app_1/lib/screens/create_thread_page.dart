@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/accessibility_provider.dart';
 
 class CreateThreadPage extends StatefulWidget {
   final String communityId;
@@ -128,23 +130,33 @@ class _CreateThreadPageState extends State<CreateThreadPage> {
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                           ),
                           const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _contentCtrl,
-                            maxLines: 6,
-                            decoration: InputDecoration(
-                              hintText: 'Write your thread here',
-                              filled: true,
-                              fillColor: const Color(0xFFD6F0FF),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.black26),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.black87),
-                              ),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          Consumer<AccessibilityProvider>(
+                            builder: (context, accessibility, _) {
+                              return TextFormField(
+                                controller: _contentCtrl,
+                                maxLines: 6,
+                                decoration: InputDecoration(
+                                  hintText: 'Write your thread here',
+                                  filled: true,
+                                  fillColor: accessibility.highContrastMode 
+                                      ? Colors.white 
+                                      : const Color(0xFFD6F0FF),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: accessibility.highContrastMode
+                                        ? const BorderSide(color: Colors.black, width: 1)
+                                        : const BorderSide(color: Colors.black26),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: accessibility.highContrastMode
+                                        ? const BorderSide(color: Colors.black, width: 2)
+                                        : const BorderSide(color: Colors.black87),
+                                  ),
+                                ),
+                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
                           Align(

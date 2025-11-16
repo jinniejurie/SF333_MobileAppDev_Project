@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'disability_page.dart';
 import 'interests_page.dart';
 import 'final_profile_page.dart';
+import '../providers/accessibility_provider.dart';
+import '../widgets/accessible_container.dart';
+import 'accessibility_settings_page.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -35,7 +39,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
@@ -64,27 +68,35 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 centerTitle: true,
               ),
               // Progress indicator
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: LinearProgressIndicator(
-                        value: (_currentIndex + 1) / _settingsPages.length,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF90CAF9)),
-                      ),
+              Consumer<AccessibilityProvider>(
+                builder: (context, accessibility, _) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            value: (_currentIndex + 1) / _settingsPages.length,
+                            backgroundColor: Colors.grey[300],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              accessibility.highContrastMode 
+                                  ? Colors.black 
+                                  : const Color(0xFF90CAF9),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${_currentIndex + 1}/${_settingsPages.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${_currentIndex + 1}/${_settingsPages.length}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
               
               // Settings menu
@@ -98,17 +110,27 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                       topRight: Radius.circular(24),
                     ),
                   ),
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Profile Settings',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                      Row(
+                        children: [
+                          Semantics(
+                            header: true,
+                            child: Expanded(
+                              child: Text(
+                                'Profile Settings',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       const Text(
@@ -125,16 +147,25 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                         final page = _settingsPages[index];
                         final isSelected = _currentIndex == index;
                         
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF90CAF9) : Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected ? const Color(0xFF90CAF9) : Colors.grey[300]!,
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
+                        return Consumer<AccessibilityProvider>(
+                          builder: (context, accessibility, _) {
+                            final selectedColor = accessibility.highContrastMode 
+                                ? Colors.black 
+                                : const Color(0xFF90CAF9);
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                    ? selectedColor 
+                                    : (accessibility.highContrastMode ? Colors.white : Colors.grey[50]),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected 
+                                      ? selectedColor 
+                                      : (accessibility.highContrastMode ? Colors.black : Colors.grey[300]!),
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
                           child: ListTile(
                             leading: Icon(
                               page['icon'],
@@ -163,7 +194,47 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                             },
                           ),
                         );
+                          },
+                        );
                       }),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Accessibility Settings
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.accessibility_new,
+                            color: Colors.black,
+                            size: 24,
+                          ),
+                          title: const Text(
+                            'Accessibility Settings',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AccessibilitySettingsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                       
                       const SizedBox(height: 30),
                       
@@ -188,31 +259,38 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => _settingsPages[_currentIndex]['page'],
+                            child: Consumer<AccessibilityProvider>(
+                              builder: (context, accessibility, _) {
+                                return ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => _settingsPages[_currentIndex]['page'],
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: accessibility.highContrastMode 
+                                        ? Colors.black 
+                                        : const Color(0xFF90CAF9),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                  child: const Text(
+                                    'Edit',
+                                    style: TextStyle(color: Colors.white),
                                   ),
                                 );
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF90CAF9),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              child: const Text(
-                                'Edit',
-                                style: TextStyle(color: Colors.white),
-                              ),
                             ),
                           ),
                         ],
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

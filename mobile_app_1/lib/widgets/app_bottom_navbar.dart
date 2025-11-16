@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../screens/community_discover_page.dart';
 import '../screens/swipe.dart';
+import '../providers/accessibility_provider.dart';
 
 class AppBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -14,83 +16,115 @@ class AppBottomNavBar extends StatelessWidget {
     required this.onPlus,
   });
 
-  Color _color(int i) => currentIndex == i ? const Color(0xFF90CAF9) : Colors.black54;
+  Color _color(int i, bool isHighContrast) => currentIndex == i 
+      ? (isHighContrast ? Colors.black : const Color(0xFF90CAF9)) 
+      : Colors.black54;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: const [
-          BoxShadow(color: Color(0xFFD6F0FF), blurRadius: 20),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () => onChanged(0),
-            icon: Icon(Icons.home_rounded, color: _color(0)),
+    return Consumer<AccessibilityProvider>(
+      builder: (context, accessibility, _) {
+        final isHighContrast = accessibility.highContrastMode;
+        
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: isHighContrast ? Colors.white : Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: isHighContrast
+                ? [
+                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20),
+                  ]
+                : const [
+                    BoxShadow(color: Color(0xFFD6F0FF), blurRadius: 20),
+                  ],
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
-              );
-            },
-            icon: Icon(Icons.explore_outlined, color: _color(1)),
-          ),
-          GestureDetector(
-            onTap: onPlus,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF90CAF9),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Semantics(
+                label: 'Home',
+                button: true,
+                child: IconButton(
+                  onPressed: () => onChanged(0),
+                  icon: Icon(Icons.home_rounded, color: _color(0, isHighContrast)),
+                ),
               ),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed('/friendsScreen');
-            },
-            icon: Icon(Icons.group_outlined, color: _color(3)),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed('/chatList');
-            },
-            icon: Stack(
-              children: [
-                Icon(Icons.chat_bubble_outline, color: _color(4)),
-                Positioned(
-                  right: 0,
-                  top: 0,
+              Semantics(
+                label: 'Explore communities',
+                button: true,
+                child: IconButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CommunityDiscoverPage()),
+                    );
+                  },
+                  icon: Icon(Icons.explore_outlined, color: _color(1, isHighContrast)),
+                ),
+              ),
+              Semantics(
+                label: 'Create new post',
+                button: true,
+                child: GestureDetector(
+                  onTap: onPlus,
                   child: Container(
-                    width: 12,
-                    height: 12,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.blue,
-                      border: Border.all(color: Colors.white, width: 1),
+                      color: isHighContrast ? Colors.black : const Color(0xFF90CAF9),
                     ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 8,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.add, color: Colors.white),
                   ),
                 ),
-              ],
-            ),
+              ),
+              Semantics(
+                label: 'Friends',
+                button: true,
+                child: IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed('/friendsScreen');
+                  },
+                  icon: Icon(Icons.group_outlined, color: _color(3, isHighContrast)),
+                ),
+              ),
+              Semantics(
+                label: 'Chat',
+                button: true,
+                child: IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed('/chatList');
+                  },
+                  icon: Stack(
+                    children: [
+                      Icon(Icons.chat_bubble_outline, color: _color(4, isHighContrast)),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isHighContrast ? Colors.black : Colors.blue,
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 8,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

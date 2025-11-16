@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../services/chat_service.dart';
+import '../providers/accessibility_provider.dart';
 import 'chat_detail_screen.dart';
 import 'swipe.dart';
 import '../widgets/app_bottom_navbar.dart';
@@ -90,12 +92,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Chat',
-                          style: textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black,
-                          ),
+                        Row(
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Expanded(
+                                child: Text(
+                                  'Chat',
+                                  style: textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                         _SegmentedHeader(
@@ -262,30 +273,39 @@ class _SegmentedHeader extends StatelessWidget {
         Expanded(
           child: InkWell(
             onTap: onDiscoverTap,
-            child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: const Color(0xFFD6F0FF),
-            ),
-            child: Row(
-              children: [
-                const Text('Discover', style: TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            child: Consumer<AccessibilityProvider>(
+              builder: (context, accessibility, _) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(16),
+                    color: accessibility.highContrastMode 
+                        ? Colors.white 
+                        : const Color(0xFFD6F0FF),
+                    border: accessibility.highContrastMode
+                        ? Border.all(color: Colors.black, width: 1)
+                        : null,
                   ),
-                  child: const Text('0', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                ),
-                const Spacer(),
-                const Icon(Icons.share_arrival_time_outlined, size: 18),
-              ],
+                  child: Row(
+                    children: [
+                      const Text('Discover', style: TextStyle(fontWeight: FontWeight.w700)),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text('0', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.share_arrival_time_outlined, size: 18),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
-        ),
         ),
       ],
     );

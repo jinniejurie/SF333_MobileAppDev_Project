@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'event_detail_page.dart';
+import '../providers/accessibility_provider.dart';
 
 class CreateEventPage extends StatefulWidget {
   final String? communityId;
@@ -355,23 +357,33 @@ class _CreateEventPageState extends State<CreateEventPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _descriptionController,
-                            maxLines: 5,
-                            decoration: InputDecoration(
-                              hintText: 'Describe your event',
-                              filled: true,
-                              fillColor: const Color(0xFFD6F0FF),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.black26),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.black87),
-                              ),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          Consumer<AccessibilityProvider>(
+                            builder: (context, accessibility, _) {
+                              return TextFormField(
+                                controller: _descriptionController,
+                                maxLines: 5,
+                                decoration: InputDecoration(
+                                  hintText: 'Describe your event',
+                                  filled: true,
+                                  fillColor: accessibility.highContrastMode 
+                                      ? Colors.white 
+                                      : const Color(0xFFD6F0FF),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: accessibility.highContrastMode
+                                        ? const BorderSide(color: Colors.black, width: 1)
+                                        : const BorderSide(color: Colors.black26),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: accessibility.highContrastMode
+                                        ? const BorderSide(color: Colors.black, width: 2)
+                                        : const BorderSide(color: Colors.black87),
+                                  ),
+                                ),
+                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
                           Row(

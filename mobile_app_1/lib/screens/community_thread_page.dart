@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/app_bottom_navbar.dart';
+import '../widgets/accessible_container.dart';
 import 'event_detail_page.dart';
 import 'create_event_page.dart';
 
@@ -302,7 +303,7 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
@@ -329,7 +330,12 @@ class _CommunityThreadPageState extends State<CommunityThreadPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(widget.communityName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                    Semantics(
+                      header: true,
+                      child: Expanded(
+                        child: Text(widget.communityName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                      ),
+                    ),
                     GestureDetector(
                       onTap: _toggleSearch,
                       child: const Icon(Icons.search, size: 22),

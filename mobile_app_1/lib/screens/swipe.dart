@@ -2,9 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'dart:math';
 import '../widgets/app_bottom_navbar.dart';
+import '../widgets/accessible_container.dart';
 import '../services/swipe_service.dart';
+import '../providers/accessibility_provider.dart';
 
 class CardSwipe extends StatefulWidget {
   const CardSwipe({super.key});
@@ -122,7 +125,7 @@ class _CardSwipeState extends State<CardSwipe> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -147,12 +150,16 @@ class _CardSwipeState extends State<CardSwipe> {
                       height: 34,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Discover People',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        'Discover People',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
                   ],
@@ -261,33 +268,55 @@ class _CardSwipeState extends State<CardSwipe> {
                                             height: 300,
                                             width: 300,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) => Container(
-                                              width: 300,
-                                              height: 300,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFD6F0FF),
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: const Icon(
-                                                Icons.person,
-                                                size: 150,
-                                                color: Color(0xFF90CAF9),
-                                              ),
+                                            errorBuilder: (context, error, stackTrace) => Consumer<AccessibilityProvider>(
+                                              builder: (context, accessibility, _) {
+                                                return Container(
+                                                  width: 300,
+                                                  height: 300,
+                                                  decoration: BoxDecoration(
+                                                    color: accessibility.highContrastMode 
+                                                        ? Colors.white 
+                                                        : const Color(0xFFD6F0FF),
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    border: accessibility.highContrastMode
+                                                        ? Border.all(color: Colors.black, width: 2)
+                                                        : null,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.person,
+                                                    size: 150,
+                                                    color: accessibility.highContrastMode 
+                                                        ? Colors.black 
+                                                        : const Color(0xFF90CAF9),
+                                                  ),
+                                                );
+                                              },
                                             ),
                                           ),
                                         )
-                                            : Container(
-                                          width: 300,
-                                          height: 300,
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFD6F0FF),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: const Icon(
-                                            Icons.person,
-                                            size: 150,
-                                            color: Color(0xFF90CAF9),
-                                          ),
+                                            : Consumer<AccessibilityProvider>(
+                                          builder: (context, accessibility, _) {
+                                            return Container(
+                                              width: 300,
+                                              height: 300,
+                                              decoration: BoxDecoration(
+                                                color: accessibility.highContrastMode 
+                                                    ? Colors.white 
+                                                    : const Color(0xFFD6F0FF),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: accessibility.highContrastMode
+                                                    ? Border.all(color: Colors.black, width: 2)
+                                                    : null,
+                                              ),
+                                              child: Icon(
+                                                Icons.person,
+                                                size: 150,
+                                                color: accessibility.highContrastMode 
+                                                    ? Colors.black 
+                                                    : const Color(0xFF90CAF9),
+                                              ),
+                                            );
+                                          },
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -336,24 +365,29 @@ class _CardSwipeState extends State<CardSwipe> {
                                         Padding(
                                           padding:
                                           const EdgeInsets.only(top: 20),
-                                          child: Wrap(
-                                            spacing: 8,
-                                            runSpacing: 4,
-                                            children: disabilities
-                                                .map((i) => Chip(
-                                              label: Text(
-                                                i,
-                                                style: const TextStyle(color: Colors.black),
-                                              ),
-                                              backgroundColor:
-                                              const Color(0xFFD6F0FF),
-                                              shape: const StadiumBorder(
-                                                side: BorderSide(
-                                                    color: Colors.black,
-                                                    width: 1),
-                                              ),
-                                            ))
-                                                .toList(),
+                                          child: Consumer<AccessibilityProvider>(
+                                            builder: (context, accessibility, _) {
+                                              return Wrap(
+                                                spacing: 8,
+                                                runSpacing: 4,
+                                                children: disabilities
+                                                    .map((i) => Chip(
+                                                  label: Text(
+                                                    i,
+                                                    style: const TextStyle(color: Colors.black),
+                                                  ),
+                                                  backgroundColor: accessibility.highContrastMode
+                                                      ? Colors.white
+                                                      : const Color(0xFFD6F0FF),
+                                                  shape: StadiumBorder(
+                                                    side: BorderSide(
+                                                        color: Colors.black,
+                                                        width: accessibility.highContrastMode ? 2 : 1),
+                                                  ),
+                                                ))
+                                                    .toList(),
+                                              );
+                                            },
                                           ),
                                         ),
                                       if (interests.isNotEmpty)

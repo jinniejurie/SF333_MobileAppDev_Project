@@ -1,12 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../services/friend_service.dart';
 import '../services/chat_service.dart';
+import '../providers/accessibility_provider.dart';
 import 'chat_detail_screen.dart';
 import 'swipe.dart';
 import '../widgets/app_bottom_navbar.dart';
+import '../widgets/accessible_container.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -35,7 +38,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     );
 
     return Scaffold(
-      body: Container(
+      body: AccessibleContainer(
         decoration: BoxDecoration(gradient: gradient),
         child: SafeArea(
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -88,9 +91,15 @@ class _FriendsScreenState extends State<FriendsScreen> {
                       children: [
                         const Icon(Icons.groups_outlined, size: 26),
                         const SizedBox(width: 8),
-                        Text(
-                          'Friends (${docs.length})',
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                        Semantics(
+                          header: true,
+                          label: 'Friends page with ${docs.length} friends',
+                          child: Expanded(
+                            child: Text(
+                              'Friends (${docs.length})',
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -141,11 +150,25 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                                       child: Column(
                                         children: [
-                                          CircleAvatar(
-                                            radius: 48,
-                                            backgroundImage: (photo != null && photo.isNotEmpty) ? NetworkImage(photo) : null,
-                                            backgroundColor: const Color(0xFFD6F0FF),
-                                            child: (photo == null || photo.isEmpty) ? const Icon(Icons.person, size: 40) : null,
+                                          Consumer<AccessibilityProvider>(
+                                            builder: (context, accessibility, _) {
+                                              return CircleAvatar(
+                                                radius: 48,
+                                                backgroundImage: (photo != null && photo.isNotEmpty) ? NetworkImage(photo) : null,
+                                                backgroundColor: accessibility.highContrastMode 
+                                                    ? Colors.white 
+                                                    : const Color(0xFFD6F0FF),
+                                                child: (photo == null || photo.isEmpty) 
+                                                    ? Icon(
+                                                        Icons.person, 
+                                                        size: 40,
+                                                        color: accessibility.highContrastMode 
+                                                            ? Colors.black 
+                                                            : null,
+                                                      ) 
+                                                    : null,
+                                              );
+                                            },
                                           ),
                                           const SizedBox(height: 10),
                                           Row(

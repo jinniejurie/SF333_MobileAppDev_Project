@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'community_home.dart';
+import '../widgets/accessible_container.dart';
+import '../providers/accessibility_provider.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -107,7 +110,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
@@ -153,11 +156,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Jane Doe',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            )),
+                        Semantics(
+                          header: true,
+                          child: Text('Jane Doe',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                              )),
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _titleController,
@@ -183,23 +189,33 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         ),
                         const SizedBox(height: 12),
                         Expanded(
-                          child: TextField(
-                            controller: _controller,
-                            maxLines: null,
-                            expands: true,
-                            decoration: InputDecoration(
-                              hintText: 'Write your post  here',
-                              filled: true,
-                              fillColor: const Color(0xFFD6F0FF),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
+                          child: Consumer<AccessibilityProvider>(
+                            builder: (context, accessibility, _) {
+                              return TextField(
+                                controller: _controller,
+                                maxLines: null,
+                                expands: true,
+                                decoration: InputDecoration(
+                                  hintText: 'Write your post  here',
+                                  filled: true,
+                                  fillColor: accessibility.highContrastMode 
+                                      ? Colors.white 
+                                      : const Color(0xFFD6F0FF),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: accessibility.highContrastMode
+                                        ? const BorderSide(color: Colors.black, width: 1)
+                                        : BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: accessibility.highContrastMode
+                                        ? const BorderSide(color: Colors.black, width: 2)
+                                        : BorderSide.none,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         if (_media.isNotEmpty) ...[
@@ -267,18 +283,24 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         const SizedBox(height: 16),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: ElevatedButton.icon(
-                            onPressed: _isPosting ? null : _submit,
-                            icon: const Icon(Icons.send),
-                            label: Text(_isPosting ? 'Posting...' : 'Post'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF90CAF9),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
+                          child: Consumer<AccessibilityProvider>(
+                            builder: (context, accessibility, _) {
+                              return ElevatedButton.icon(
+                                onPressed: _isPosting ? null : _submit,
+                                icon: const Icon(Icons.send),
+                                label: Text(_isPosting ? 'Posting...' : 'Post'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: accessibility.highContrastMode 
+                                      ? Colors.black 
+                                      : const Color(0xFF90CAF9),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         )
                       ],

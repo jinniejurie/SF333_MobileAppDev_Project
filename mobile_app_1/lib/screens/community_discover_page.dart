@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'swipe.dart';
 import '../widgets/app_bottom_navbar.dart';
+import '../widgets/accessible_container.dart';
+import '../providers/accessibility_provider.dart';
 import 'community_thread_page.dart';
 
 class CommunityDiscoverPage extends StatefulWidget {
@@ -95,20 +98,26 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                       .toList(),
                 ),
                 const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (nameCtrl.text.trim().isEmpty) return;
-                      Navigator.of(context).pop(true);
-                    },
-                    icon: const Icon(Icons.check),
-                    label: const Text('Create'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF90CAF9),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
+                Consumer<AccessibilityProvider>(
+                  builder: (context, accessibility, _) {
+                    return Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (nameCtrl.text.trim().isEmpty) return;
+                          Navigator.of(context).pop(true);
+                        },
+                        icon: const Icon(Icons.check),
+                        label: const Text('Create'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accessibility.highContrastMode 
+                              ? Colors.black 
+                              : const Color(0xFF90CAF9),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    );
+                  },
                 )
               ],
             ),
@@ -180,7 +189,7 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
         ),
@@ -200,9 +209,18 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                   ),
                 ]),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text('Community', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Semantics(
+                      header: true,
+                      child: Expanded(
+                        child: Text('Community', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               Padding(
@@ -294,17 +312,32 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                         final name = (data['name'] ?? 'Unknown').toString();
                         final membersCount = (data['membersCount'] ?? 0) as int;
                         final colorHex = (data['coverColor'] ?? '#FFE0B2').toString();
-                        final bg = _hexToColor(colorHex);
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: bg,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
-                              ],
-                            ),
+                        return Consumer<AccessibilityProvider>(
+                          builder: (context, accessibility, _) {
+                            final bg = accessibility.highContrastMode 
+                                ? Colors.white 
+                                : _hexToColor(colorHex);
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: bg,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: accessibility.highContrastMode 
+                                      ? Border.all(color: Colors.black, width: 2)
+                                      : null,
+                                  boxShadow: accessibility.highContrastMode
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 5),
+                                          ),
+                                        ]
+                                      : const [
+                                          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+                                        ],
+                                ),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -332,6 +365,8 @@ class _CommunityDiscoverPageState extends State<CommunityDiscoverPage> {
                               ]),
                             ),
                           ),
+                        );
+                          },
                         );
                       },
                     );

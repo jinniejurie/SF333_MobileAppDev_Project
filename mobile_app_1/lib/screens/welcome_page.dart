@@ -7,6 +7,7 @@ import 'community_home.dart';
 import 'disability_page.dart';
 import 'interests_page.dart';
 import 'final_profile_page.dart';
+import '../widgets/accessible_container.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -98,7 +99,7 @@ class _WelcomePageState extends State<WelcomePage> {
 
   Widget _buildWelcomeScreen() {
     return Scaffold(
-      body: Container(
+      body: AccessibleContainer(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFD6F0FF), Color(0xFFEFF4FF)],
