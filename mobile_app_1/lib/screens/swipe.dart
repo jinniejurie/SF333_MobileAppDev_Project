@@ -234,9 +234,11 @@ class _CardSwipeState extends State<CardSwipe> {
         child: Column(
           children: [
             SafeArea(
+              bottom: false,
               child: Padding(
-                padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 4),
+                padding: const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 0),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Image.asset(
@@ -244,7 +246,7 @@ class _CardSwipeState extends State<CardSwipe> {
                       width: 42,
                       height: 34,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Semantics(
                       header: true,
                       child: Text(
@@ -263,7 +265,7 @@ class _CardSwipeState extends State<CardSwipe> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 100), // Add padding to prevent navigator from blocking
+                padding: const EdgeInsets.only(top: 4, bottom: 100), // Add padding to prevent navigator from blocking
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
