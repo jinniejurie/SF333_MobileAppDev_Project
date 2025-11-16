@@ -85,6 +85,27 @@ class ChatService {
     await batch.commit();
   }
 
+  /// Sends an image message to a chat and updates the chat's last message.
+  /// 
+  /// The imageUrl should be a base64 encoded string or a URL.
+  Future<void> sendImageMessage(String chatId, String imageUrl, {String? caption}) async {
+    final msgRef = _chatsCol.doc(chatId).collection('messages').doc();
+    final data = {
+      'senderId': _uid,
+      'text': caption ?? '',
+      'imageUrl': imageUrl,
+      'timestamp': FieldValue.serverTimestamp(),
+      'readBy': <String>[_uid],
+    };
+    final batch = _firestore.batch();
+    batch.set(msgRef, data);
+    batch.set(_chatsCol.doc(chatId), {
+      'lastMessage': caption?.isNotEmpty == true ? caption! : '📷 Image',
+      'lastTimestamp': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    await batch.commit();
+  }
+
   /// Marks all recent messages in a chat as read by the current user.
   /// 
   /// Only processes the last 50 messages for performance.

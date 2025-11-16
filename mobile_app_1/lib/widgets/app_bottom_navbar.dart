@@ -98,7 +98,7 @@ class AppBottomNavBar extends StatelessWidget {
                 button: true,
                 child: IconButton(
                   onPressed: () {
-                    Navigator.of(context).pushNamed('/friendsScreen');
+                    Navigator.of(context).pushNamed('/swipe');
                   },
                   icon: Icon(Icons.group_outlined, color: _getIconColor(3, isHighContrast)),
                 ),

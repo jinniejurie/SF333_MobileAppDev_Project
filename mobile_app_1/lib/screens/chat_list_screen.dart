@@ -62,7 +62,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             children: [
                               Align(
                                 alignment: Alignment.center,
-                                child: Icon(Icons.cloud_outlined, size: 28, color: Colors.black87),
+                                child: Image.asset('assets/cloud_logo.png', height: 36),
                               ),
                               Align(
                                 alignment: Alignment.centerRight,
@@ -139,7 +139,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         builder: (context, userSnap) {
                           final user = userSnap.data?.data();
                           final name = user?['name'] ?? 'Unknown';
-                          final handle = user?['handle'] ?? '@name';
+                          final handle = user?['handle'] ?? '';
                           final photo = user?['profileImage'] as String?;
                           final isOnline = user?['isOnline'] == true;
                           final lastMessage = (data['lastMessage'] ?? '') as String;
@@ -189,7 +189,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          lastMessage.isEmpty ? 'omgggggg' : lastMessage,
+                                          lastMessage.isEmpty ? 'Start a conversation' : lastMessage,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
@@ -299,7 +299,6 @@ class _SegmentedHeader extends StatelessWidget {
                         child: const Text('0', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                       ),
                       const Spacer(),
-                      const Icon(Icons.share_arrival_time_outlined, size: 18),
                     ],
                   ),
                 );
@@ -351,5 +350,3 @@ class _Avatar extends StatelessWidget {
     );
   }
 }
-
-
