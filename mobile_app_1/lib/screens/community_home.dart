@@ -3,11 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'swipe.dart';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'event_detail_page.dart';
 import 'community_discover_page.dart';
 import 'community_thread_page.dart';
 import '../widgets/app_bottom_navbar.dart';
 import '../widgets/accessible_container.dart';
+import '../providers/accessibility_provider.dart';
 import 'create_event_page.dart';
 
 class PostItem {
@@ -634,14 +636,21 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
-        ],
-      ),
+    return Consumer<AccessibilityProvider>(
+      builder: (context, accessibility, _) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: accessibility.highContrastMode
+                ? Border.all(color: Colors.black, width: 3)
+                : null,
+            boxShadow: accessibility.highContrastMode
+                ? null // Remove shadows in high contrast mode
+                : const [
+                    BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+                  ],
+          ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -751,6 +760,8 @@ class _PostCard extends StatelessWidget {
           ],
         ),
       ),
+        );
+      },
     );
   }
 

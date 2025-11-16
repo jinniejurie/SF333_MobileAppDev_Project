@@ -156,6 +156,13 @@ class _SignUpPageState extends State<SignUpPage> {
         locationData['latitude']!,
         locationData['longitude']!,
       );
+      
+      // Create location display string
+      final String locationDisplay = "[${locationData['latitude']}° N, ${locationData['longitude']}° E]";
+      
+      // Get city_country (for now, default to Bangkok, Thailand)
+      // TODO: Implement reverse geocoding when geocoding package is available
+      final String cityCountry = "Tambon Samrong, Thailand"; // Default value
 
       // 2. Save user and location data in the 'users' document
       await FirebaseFirestore.instance.collection("users").doc(uid).set({
@@ -166,10 +173,14 @@ class _SignUpPageState extends State<SignUpPage> {
         "avatarBase64": avatarBase64,
         "createdAt": FieldValue.serverTimestamp(),
 
-        "uid": customUserId,
+        "custom_user_id": customUserId,
+        "uid": customUserId, // Keep both for backward compatibility
 
-        // GeoPoint data
-        "location": locationGeoPoint,
+        // Location data - support multiple formats
+        "location": locationGeoPoint, // For backward compatibility
+        "location_geopoint": locationGeoPoint,
+        "location_display": locationDisplay,
+        "city_country": cityCountry,
       });
 
       if (mounted) {

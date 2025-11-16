@@ -26,21 +26,41 @@ class AccessibleContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AccessibilityProvider>(
       builder: (context, accessibility, _) {
-        final theme = Theme.of(context);
+        BoxDecoration? finalDecoration;
 
-        BoxDecoration? finalDecoration = decoration;
-
-        // Apply high contrast mode to gradients
-        if (accessibility.highContrastMode && decoration?.gradient != null) {
-          finalDecoration = decoration?.copyWith(
-            gradient: null,
-            color: Colors.white,
-          );
-        } else if (accessibility.highContrastMode && decoration?.color == null) {
-          // If no gradient but high contrast, use white background
-          finalDecoration = (decoration ?? const BoxDecoration()).copyWith(
-            color: Colors.white,
-          );
+        // Apply high contrast mode
+        if (accessibility.highContrastMode) {
+          // In high contrast mode, always use white background with thick black border
+          if (decoration != null) {
+            // Copy all properties except gradient, and set color to white with thick border
+            finalDecoration = BoxDecoration(
+              color: Colors.white,
+              borderRadius: decoration!.borderRadius,
+              border: decoration!.border != null
+                  ? Border.all(
+                      color: Colors.black,
+                      width: 3, // Thick border for high contrast
+                    )
+                  : Border.all(
+                      color: Colors.black,
+                      width: 3, // Thick border for high contrast
+                    ),
+              boxShadow: null, // Remove shadows in high contrast mode
+              shape: decoration!.shape,
+            );
+          } else {
+            // If no decoration, use white background with thick black border
+            finalDecoration = BoxDecoration(
+              color: Colors.white,
+              border: Border.all(
+                color: Colors.black,
+                width: 3, // Thick border for high contrast
+              ),
+            );
+          }
+        } else {
+          // Normal mode - use original decoration
+          finalDecoration = decoration;
         }
 
         return Container(

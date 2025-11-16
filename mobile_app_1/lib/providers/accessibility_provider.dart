@@ -86,18 +86,26 @@ class AccessibilityProvider extends ChangeNotifier {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.black,
-            side: const BorderSide(color: Colors.black, width: 2),
+            side: const BorderSide(color: Colors.black, width: 3), // Thick border
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.black, width: 2),
+            borderSide: const BorderSide(color: Colors.black, width: 3), // Thick border
           ),
           enabledBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.black, width: 2),
+            borderSide: const BorderSide(color: Colors.black, width: 3), // Thick border
           ),
           focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.black, width: 2),
+            borderSide: const BorderSide(color: Colors.black, width: 3), // Thick border
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.black, width: 3), // Thick border for cards
           ),
         ),
       );

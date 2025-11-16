@@ -4,6 +4,8 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'dart:math';
+import 'dart:convert';
+import 'dart:typed_data';
 import '../widgets/app_bottom_navbar.dart';
 import '../widgets/accessible_container.dart';
 import '../services/swipe_service.dart';
@@ -50,6 +52,98 @@ class _CardSwipeState extends State<CardSwipe> {
       }
     }
     return disabilityNames;
+  }
+
+  // Build profile image widget - supports both URL and base64
+  Widget _buildProfileImage(String? profileImageUrl, Uint8List? profileImageBytes) {
+    if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+      return Image.network(
+        profileImageUrl,
+        height: 300,
+        width: 300,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Consumer<AccessibilityProvider>(
+          builder: (context, accessibility, _) {
+            return Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                color: accessibility.highContrastMode 
+                    ? Colors.white 
+                    : const Color(0xFFD6F0FF),
+                borderRadius: BorderRadius.circular(20),
+                border: accessibility.highContrastMode
+                    ? Border.all(color: Colors.black, width: 2)
+                    : null,
+              ),
+              child: Icon(
+                Icons.person,
+                size: 150,
+                color: accessibility.highContrastMode 
+                    ? Colors.black 
+                    : const Color(0xFF90CAF9),
+              ),
+            );
+          },
+        ),
+      );
+    } else if (profileImageBytes != null) {
+      return Image.memory(
+        profileImageBytes,
+        height: 300,
+        width: 300,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Consumer<AccessibilityProvider>(
+          builder: (context, accessibility, _) {
+            return Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                color: accessibility.highContrastMode 
+                    ? Colors.white 
+                    : const Color(0xFFD6F0FF),
+                borderRadius: BorderRadius.circular(20),
+                border: accessibility.highContrastMode
+                    ? Border.all(color: Colors.black, width: 2)
+                    : null,
+              ),
+              child: Icon(
+                Icons.person,
+                size: 150,
+                color: accessibility.highContrastMode 
+                    ? Colors.black 
+                    : const Color(0xFF90CAF9),
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      return Consumer<AccessibilityProvider>(
+        builder: (context, accessibility, _) {
+          return Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              color: accessibility.highContrastMode 
+                  ? Colors.white 
+                  : const Color(0xFFD6F0FF),
+              borderRadius: BorderRadius.circular(20),
+              border: accessibility.highContrastMode
+                  ? Border.all(color: Colors.black, width: 2)
+                  : null,
+            ),
+            child: Icon(
+              Icons.person,
+              size: 150,
+              color: accessibility.highContrastMode 
+                  ? Colors.black 
+                  : const Color(0xFF90CAF9),
+            ),
+          );
+        },
+      );
+    }
   }
 
   //Calculate distance between profiles (จาก geopoint ใน data)
@@ -202,16 +296,71 @@ class _CardSwipeState extends State<CardSwipe> {
                           // Create cards
                           return FutureBuilder<List<Widget>>(
                             future: Future.wait(documents.map((doc) async {
-                              final userData =
-                              doc.data() as Map<String, dynamic>;
+                              try {
+                                final userData =
+                                doc.data() as Map<String, dynamic>;
+                              
+                              // Handle profile image - support both profileImage (URL) and avatarBase64
+                              String? profileImageUrl;
+                              Uint8List? profileImageBytes;
                               final profileImage = userData['profileImage'] as String?;
+                              final avatarBase64 = userData['avatarBase64'] as String?;
+                              
+                              if (profileImage != null && profileImage.isNotEmpty) {
+                                profileImageUrl = profileImage;
+                              } else if (avatarBase64 != null && avatarBase64.isNotEmpty) {
+                                try {
+                                  profileImageBytes = base64Decode(avatarBase64);
+                                } catch (e) {
+                                  debugPrint('Failed to decode avatarBase64: $e');
+                                }
+                              }
+                              
                               final name = userData['name'] ?? 'Unknown';
                               final gender = userData['gender'] ?? '';
                               final bio = userData['bio'] ?? '';
-                              final Timestamp? birthTimestamp =
-                              userData['birthDate'];
-                              final DateTime birthDate =
-                                  birthTimestamp?.toDate() ?? DateTime(2000, 1, 1);
+                              
+                              // Handle birthDate - support both Timestamp and String
+                              DateTime birthDate = DateTime(2000, 1, 1);
+                              final birthDateValue = userData['birthDate'];
+                              if (birthDateValue is Timestamp) {
+                                birthDate = birthDateValue.toDate();
+                              } else if (birthDateValue is String) {
+                                try {
+                                  // Try parsing string format like "January 11, 2000 at 12:00:00 AM UTC+7"
+                                  // First try standard DateTime.parse
+                                  birthDate = DateTime.parse(birthDateValue);
+                                } catch (e) {
+                                  // If standard parse fails, try manual parsing for format "January 11, 2000 at 12:00:00 AM UTC+7"
+                                  try {
+                                    final parts = birthDateValue.split(' at ');
+                                    if (parts.isNotEmpty) {
+                                      final datePart = parts[0]; // "January 11, 2000"
+                                      final monthNames = {
+                                        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+                                        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+                                        'September': 9, 'October': 10, 'November': 11, 'December': 12
+                                      };
+                                      
+                                      for (final entry in monthNames.entries) {
+                                        if (datePart.contains(entry.key)) {
+                                          final dayYear = datePart.replaceAll(entry.key, '').trim();
+                                          final dayYearParts = dayYear.split(', ');
+                                          if (dayYearParts.length == 2) {
+                                            final day = int.parse(dayYearParts[0]);
+                                            final year = int.parse(dayYearParts[1]);
+                                            birthDate = DateTime(year, entry.value, day);
+                                            break;
+                                          }
+                                        }
+                                      }
+                                    }
+                                  } catch (e2) {
+                                    debugPrint('Failed to parse birthDate string: $birthDateValue');
+                                  }
+                                }
+                              }
+                              
                               final today = DateTime.now();
                               int age = today.year - birthDate.year;
                               if (today.month < birthDate.month ||
@@ -220,8 +369,12 @@ class _CardSwipeState extends State<CardSwipe> {
                                 age--;
                               }
 
-                              // Get the profile's GeoPoint
-                              final GeoPoint? profileLocation = userData['location'] as GeoPoint?;
+                              // Get the profile's GeoPoint - support both 'location' and 'location_geopoint'
+                              GeoPoint? profileLocation = userData['location'] as GeoPoint?;
+                              if (profileLocation == null) {
+                                profileLocation = userData['location_geopoint'] as GeoPoint?;
+                              }
+                              
                               String distanceText = '';
                               if (profileLocation != null) {
                                 final double distance = _calculateDistance(currentUserLocation, profileLocation);
@@ -239,20 +392,27 @@ class _CardSwipeState extends State<CardSwipe> {
                               await _getDisability(disRefs);
 
 
-                              return Container(
-                                margin: const EdgeInsets.all(8),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(color: Colors.black, width: 1),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.black26,
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 5))
-                                  ],
-                                ),
+                              return Consumer<AccessibilityProvider>(
+                                builder: (context, accessibility, _) {
+                                  return Container(
+                                    margin: const EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(30),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: accessibility.highContrastMode ? 3 : 1,
+                                      ),
+                                      boxShadow: accessibility.highContrastMode
+                                          ? null // Remove shadows in high contrast mode
+                                          : [
+                                              BoxShadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 5))
+                                            ],
+                                    ),
                                 child: SingleChildScrollView(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
@@ -260,63 +420,12 @@ class _CardSwipeState extends State<CardSwipe> {
                                     CrossAxisAlignment.start,
                                     children: [
                                       Center(
-                                        child: (profileImage != null && profileImage.isNotEmpty)
-                                            ? ClipRRect(
+                                        child: ClipRRect(
                                           borderRadius: BorderRadius.circular(20),
-                                          child: Image.network(
-                                            profileImage,
-                                            height: 300,
-                                            width: 300,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) => Consumer<AccessibilityProvider>(
-                                              builder: (context, accessibility, _) {
-                                                return Container(
-                                                  width: 300,
-                                                  height: 300,
-                                                  decoration: BoxDecoration(
-                                                    color: accessibility.highContrastMode 
-                                                        ? Colors.white 
-                                                        : const Color(0xFFD6F0FF),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                    border: accessibility.highContrastMode
-                                                        ? Border.all(color: Colors.black, width: 2)
-                                                        : null,
-                                                  ),
-                                                  child: Icon(
-                                                    Icons.person,
-                                                    size: 150,
-                                                    color: accessibility.highContrastMode 
-                                                        ? Colors.black 
-                                                        : const Color(0xFF90CAF9),
-                                                  ),
-                                                );
-                                              },
-                                            ),
+                                          child: _buildProfileImage(
+                                            profileImageUrl,
+                                            profileImageBytes,
                                           ),
-                                        )
-                                            : Consumer<AccessibilityProvider>(
-                                          builder: (context, accessibility, _) {
-                                            return Container(
-                                              width: 300,
-                                              height: 300,
-                                              decoration: BoxDecoration(
-                                                color: accessibility.highContrastMode 
-                                                    ? Colors.white 
-                                                    : const Color(0xFFD6F0FF),
-                                                borderRadius: BorderRadius.circular(20),
-                                                border: accessibility.highContrastMode
-                                                    ? Border.all(color: Colors.black, width: 2)
-                                                    : null,
-                                              ),
-                                              child: Icon(
-                                                Icons.person,
-                                                size: 150,
-                                                color: accessibility.highContrastMode 
-                                                    ? Colors.black 
-                                                    : const Color(0xFF90CAF9),
-                                              ),
-                                            );
-                                          },
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -418,11 +527,58 @@ class _CardSwipeState extends State<CardSwipe> {
                                   ),
                                 ),
                               );
+                                },
+                              );
+                              } catch (e, stackTrace) {
+                                debugPrint('Error building card for user ${doc.id}: $e');
+                                debugPrint('Stack trace: $stackTrace');
+                                // Return a placeholder card on error
+                                return Container(
+                                  margin: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(color: Colors.red, width: 1),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'Error loading user data',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                );
+                              }
                             }).toList()),
                             builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
                                 return const Center(
                                     child: CircularProgressIndicator());
+                              }
+                              if (snapshot.hasError) {
+                                debugPrint('FutureBuilder error: ${snapshot.error}');
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.error_outline, size: 48, color: Colors.white),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Error loading cards: ${snapshot.error}',
+                                        style: const TextStyle(color: Colors.white),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                return const Center(
+                                  child: Text(
+                                    'No cards available',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                );
                               }
                               final cards = snapshot.data!;
                               return CardSwiper(
